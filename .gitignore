@@ -1,0 +1,7 @@
+# ignore vim swap files
+*.swp
+*.swo
+
+# ignore code composer output
+Debug
+.launches/
