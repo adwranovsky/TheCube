@@ -35,7 +35,7 @@ int main(void)
     // This example function is found in the f2802x_Gpio.c file and
     // illustrates how to set the GPIO to it's default state.
     //
-    //InitGpio();  // Skipped for this example
+    InitGpio();  // Skipped for this example
 
     //
     // Step 3. Clear all interrupts and initialize PIE vector table:
