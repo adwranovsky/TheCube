@@ -35,7 +35,7 @@ int main(void)
     // This example function is found in the f2802x_Gpio.c file and
     // illustrates how to set the GPIO to it's default state.
     //
-    InitGpio();  // Skipped for this example
+    InitGpio();
 
     //
     // Step 3. Clear all interrupts and initialize PIE vector table:
@@ -76,14 +76,11 @@ int main(void)
     EDIS;      // This is needed to disable write to EALLOW protected registers
 
     //
-    // Step 4. Initialize the Device Peripheral. This function can be
-    // found in f2802x_CpuTimers.c
-    //
-
-    //
-    // For this example, only initialize the Cpu Timers
+    // Step 4. Initialize the Device Peripherals.
     //
     InitCpuTimers();
+    InitAdc();
+    InitSci();
 
     //
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
@@ -108,7 +105,7 @@ int main(void)
     //
 
     //
-    // Configure GPIO34 as a GPIO output pin
+    // Configure GPIO0 as a GPIO output pin
     //
     EALLOW;
     GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 0;
@@ -141,14 +138,15 @@ int main(void)
 
 /*
  * cpu_timer0_isr
+ *
+ * Toggles GPIO0
  */
-
 __interrupt void cpu_timer0_isr(void)
 {
     CpuTimer0.InterruptCount++;
 
     //
-    // Toggle GPIO34 once per 500 milliseconds
+    // Toggle GPIO0 once per 500 milliseconds
     //
     GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;
 
