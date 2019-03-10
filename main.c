@@ -2,12 +2,15 @@
  * C2000Ware includes
  */
 #include <DSP28x_Project.h>
+#include <f2802x_globalprototypes.h>
 #include <gpio.h>
 
 /*
  * Forward declarations
  */
 __interrupt void cpu_timer0_isr(void);
+__interrupt void sci_rx_isr(void);
+__interrupt void sci_tx_isr(void);
 
 /**
  * main.c
@@ -73,6 +76,8 @@ int main(void)
     //
     EALLOW;    // This is needed to write to EALLOW protected registers
     PieVectTable.TINT0 = &cpu_timer0_isr;
+    PieVectTable.SCIRXINTA = &sci_rx_isr;
+    PieVectTable.SCITXINTA = &sci_tx_isr;
     EDIS;      // This is needed to disable write to EALLOW protected registers
 
     //
@@ -113,14 +118,18 @@ int main(void)
     EDIS;
 
     //
-    // Enable CPU INT1 which is connected to CPU-Timer 0
+    // Enable CPU interrupts
     //
-    IER |= M_INT1;
+    IER |= M_INT1; // CPU timer 0 comes in on INT1
+    IER |= M_INT9; // SCI interrupts come in on INT9
 
     //
-    // Enable TINT0 in the PIE: Group 1 interrupt 7
+    // Enable PIE interrupts
     //
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1;
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1; // Enable the PIE block
+    PieCtrlRegs.PIEIER1.bit.INTx7 = 1; // Enable group 1 interrupt 7
+    PieCtrlRegs.PIEIER9.bit.INTx1 = 1; // Enable group 9 interrupt 1 (SCARXINTA)
+    PieCtrlRegs.PIEIER9.bit.INTx2 = 1; // Enable group 9 interrupt 2 (SCATXINTA)
 
     //
     // Enable global Interrupts and higher priority real-time debug events
@@ -131,7 +140,9 @@ int main(void)
     //
     // Step 6. IDLE loop. Just sit and loop forever (optional)
     //
-    for(;;);
+    while (1) {
+        sci_send_char(sci_get_char());
+    }
 
     return 0;
 }
