@@ -101,11 +101,6 @@ extern int16 GetTemperatureC(int16 sensorSample); // returns temp in deg. C
 extern int16 GetTemperatureK(int16 sensorSample); // returns temp in deg. K
 extern void Osc1Comp(int16 sensorSample);
 extern void Osc2Comp(int16 sensorSample);
-extern char sci_get_char(void); // Gets a single character from the serial interface
-extern void sci_send_char(char c); // Sends a single character over the serial interface
-extern void sci_get_buf(char *buf, size_t length); // Gets length number of characters from the serial interface
-extern void sci_send_buf(const char *buf, size_t length); // Sends length number of characters over the serial interface. Blocks until finished.
-
 
 //
 // DSP28_DBGIER.asm

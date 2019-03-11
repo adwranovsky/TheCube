@@ -4,6 +4,7 @@
 #include <DSP28x_Project.h>
 #include <f2802x_globalprototypes.h>
 #include <gpio.h>
+#include "main.h"
 
 /*
  * Forward declarations
@@ -141,7 +142,14 @@ int main(void)
     // Step 6. IDLE loop. Just sit and loop forever (optional)
     //
     while (1) {
-        sci_send_char(sci_get_char());
+        //sci_send_char(sci_get_char());
+        char buf[4];
+        sci_get_buf(buf, sizeof buf);
+        //sci_send_buf(buf, sizeof buf);
+        size_t i;
+        for (i = 0; i < sizeof buf; i++) {
+            sci_send_char(buf[i]);
+        }
     }
 
     return 0;

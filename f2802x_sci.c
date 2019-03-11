@@ -46,21 +46,20 @@
 #include <stddef.h>
 #include "F2802x_Device.h"     // Headerfile Include File
 #include "f2802x_examples.h"   // Examples Include File
+#include "main.h"
 
 static struct {
-    volatile int busy;
-    char *next;
-    char *end;
+    volatile char *next;
+    volatile const char *end;
 } Rx_Isr_State = {
-    .busy = 0,
     .next = NULL,
     .end = NULL
 };
 
 static struct {
     volatile int busy;
-    char *next;
-    char *end;
+    const char *next;
+    volatile const char *end;
 } Tx_Isr_State = {
     .busy = 0,
     .next = NULL,
@@ -193,42 +192,75 @@ char sci_get_char(void) {
     volatile char c;
     Rx_Isr_State.next = &c;
     Rx_Isr_State.end  = &c + 1;
-    Rx_Isr_State.busy = 1;
 
-    SciaRegs.SCICTL2.bit.RXBKINTENA = 1; // enable rx interrupt
-    while (Rx_Isr_State.busy) {};
-    SciaRegs.SCICTL2.bit.RXBKINTENA = 0; // disable rx interrupt
+    // Start the interrupt, then wait until it turns itself off
+    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
+    while (SciaRegs.SCICTL2.bit.RXBKINTENA);
 
     return c;
 }
 
 void sci_send_char(char c) {
     // No interrupts are used when sending a single char
-    while (!SciaRegs.SCICTL2.bit.TXRDY) {};
+    while (!SciaRegs.SCICTL2.bit.TXRDY);
     SciaRegs.SCITXBUF = c;
-    while (!SciaRegs.SCICTL2.bit.TXEMPTY) {};
+    while (!SciaRegs.SCICTL2.bit.TXEMPTY);
 }
 
 void sci_get_buf(char *buf, size_t length) {
+    // If data is waiting in the receive register, grab it first
+    if (SciaRegs.SCIRXST.bit.RXRDY) {
+        *buf = SciaRegs.SCIRXBUF.bit.RXDT;
+
+        // if the length was 1, we can be done now
+        if (length == 1) {
+            return;
+        }
+
+        buf++;
+        length--;
+    }
+
+    // Wait for the receive interrupt to get the rest of the characters
+    Rx_Isr_State.next = buf;
+    Rx_Isr_State.end  = buf + length;
+
+    // Start the interrupt, then wait until it turns itself off
+    SciaRegs.SCICTL2.bit.RXBKINTENA = 1;
+    while (SciaRegs.SCICTL2.bit.RXBKINTENA);
 }
 
 void sci_send_buf(const char *buf, size_t length) {
+    // Length of 1 is special
+    if (length==1) {
+        sci_send_char(*buf);
+        return;
+    }
+
+    // Ready the TX interrupt state
+    Tx_Isr_State.next = buf+1;
+    Tx_Isr_State.end = buf+length;
+    Tx_Isr_State.busy = 1;
+
+    // Make sure the transmitter is ready
+    while (!SciaRegs.SCICTL2.bit.TXRDY);
+
+    // Stuff the buffer with the first character to get things started
+    SciaRegs.SCITXBUF = *buf;
+
+    // Enable the interrupt, then wait until the interrupt signals we're done
+    SciaRegs.SCICTL2.bit.TXINTENA = 1;
+    while (Tx_Isr_State.busy);
 }
 
 __interrupt void sci_rx_isr(void) {
     // Read the RX buffer register to clear the interrupt
-    char c = SciaRegs.SCIRXBUF.bit.RXDT;
+    *Rx_Isr_State.next = SciaRegs.SCIRXBUF.bit.RXDT;
+    Rx_Isr_State.next++;
 
-    // Check if we're actively trying to receive something
-    if (Rx_Isr_State.busy) {
-        // Put the received character in the buffer, and increment to the next position
-        *Rx_Isr_State.next = c;
-        Rx_Isr_State.next++;
-
-        // If this was the last character, signal to the main application
-        if (Rx_Isr_State.next == Rx_Isr_State.end) {
-            Rx_Isr_State.busy = 0;
-        }
+    // If this was the last character, disable this interrupt
+    if (Rx_Isr_State.next == Rx_Isr_State.end) {
+        SciaRegs.SCICTL2.bit.RXBKINTENA = 0; // disable rx interrupt
     }
 
     // Acknowledge PIE group interrupt
@@ -236,11 +268,16 @@ __interrupt void sci_rx_isr(void) {
 }
 
 __interrupt void sci_tx_isr(void) {
+    // Put the next character in the buffer to clear the interrupt
     SciaRegs.SCITXBUF = *Tx_Isr_State.next;
     Tx_Isr_State.next++;
+
+    // If the whole buffer's been transferred, disable this interrupt
     if (Tx_Isr_State.next == Tx_Isr_State.end) {
+        SciaRegs.SCICTL2.bit.TXINTENA = 0;
         Tx_Isr_State.busy = 0;
     }
+
     // Acknowledge PIE group interrupt
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP9;
 }
