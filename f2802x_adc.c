@@ -10,32 +10,32 @@
 // $Copyright:
 // Copyright (C) 2009-2018 Texas Instruments Incorporated - http://www.ti.com/
 //
-// Redistribution and use in source and binary forms, with or without 
-// modification, are permitted provided that the following conditions 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
 // are met:
-// 
-//   Redistributions of source code must retain the above copyright 
+//
+//   Redistributions of source code must retain the above copyright
 //   notice, this list of conditions and the following disclaimer.
-// 
+//
 //   Redistributions in binary form must reproduce the above copyright
-//   notice, this list of conditions and the following disclaimer in the 
-//   documentation and/or other materials provided with the   
+//   notice, this list of conditions and the following disclaimer in the
+//   documentation and/or other materials provided with the
 //   distribution.
-// 
+//
 //   Neither the name of Texas Instruments Incorporated nor the names of
 //   its contributors may be used to endorse or promote products derived
 //   from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 // LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 // DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // $
 //###########################################################################
@@ -51,6 +51,12 @@
 //
 #define ADC_usDELAY  1000L
 
+static struct {
+    volatile size_t index;
+    size_t length;
+    volatile char *data;
+} Sample_Buffer;
+
 //
 // InitAdc - This function initializes ADC to a known state.
 // NOTE: ADC INIT IS DIFFERENT ON 2802x DEVICES COMPARED TO OTHER 28X DEVICES
@@ -62,10 +68,10 @@ void InitAdc(void)
     //
     //                               IMPORTANT
     // The Device_cal function, which copies the ADC calibration values from TI
-    // reserved OTP into the ADCREFSEL and ADCOFFTRIM registers, occurs 
-    // automatically in the Boot ROM. If the boot ROM code is bypassed during 
-    // the debug process, the following function MUST be called for the ADC to 
-    // function according to specification. The clocks to the ADC MUST be 
+    // reserved OTP into the ADCREFSEL and ADCOFFTRIM registers, occurs
+    // automatically in the Boot ROM. If the boot ROM code is bypassed during
+    // the debug process, the following function MUST be called for the ADC to
+    // function according to specification. The clocks to the ADC MUST be
     // enabled before calling this function.
     // See the device data manual and/or the ADC Reference
     // Manual for more information.
@@ -77,8 +83,8 @@ void InitAdc(void)
 
     //
     // To powerup the ADC the ADCENCLK bit should be set first to enable
-    // clocks, followed by powering up the bandgap, reference circuitry, and 
-    // ADC core. Before the first conversion is performed a 5ms delay must be 
+    // clocks, followed by powering up the bandgap, reference circuitry, and
+    // ADC core. Before the first conversion is performed a 5ms delay must be
     // observed after power up to give all analog circuits time to power up and
     // settle
     //
@@ -97,6 +103,25 @@ void InitAdc(void)
     EDIS;
 
     DELAY_US(ADC_usDELAY);         // Delay before converting ADC channels
+
+    //
+    // Set up ADC for audio sampling. Only SoC 0 is needed, since a sample rate
+    // of 40 KHz should be slow enough to not need to overlay conversions.
+    //
+    EALLOW;
+    AdcRegs.ADCCTL1.bit.INTPULSEPOS   = 1; // ADC interrupt signaled as result is latched into the result register
+    AdcRegs.ADCCTL2.bit.ADCNONOVERLAP = 1; // ADC samples can't overlap
+    AdcRegs.ADCCTL2.bit.CLKDIV2EN     = 0; // ADC clock equals system clock rate (60 MHz)
+
+    AdcRegs.INTSEL1N2.bit.INT1CONT    = 0; // ADC interrupt pulse not generated until user clears interrput flag in ADCINTFLG
+    AdcRegs.INTSEL1N2.bit.INT1E       = 1; // ADC interrupt is enabled
+    AdcRegs.INTSEL1N2.bit.INT1SEL     = 0; // End of conversion 0 triggers interrupt 1
+
+    AdcRegs.ADCSOC0CTL.bit.TRIGSEL    = 2; // Start of conversion 0 will be triggered by TINT1 (CPU timer 1)
+    AdcRegs.ADCSOC0CTL.bit.CHSEL      = 0; // SOC0 will convert ADCINA0
+    AdcRegs.ADCSOC0CTL.bit.ACQPS      = 6; // SOC0 will sample for 6+1 clock cycles
+    EDIS;
+
 }
 
 //
@@ -106,55 +131,55 @@ void
 InitAdcAio()
 {
     EALLOW;
-    
+
     //
     // Configure ADC pins using AIO regs
     // This specifies which of the possible AIO pins will be Analog input pins.
-    // NOTE: AIO1, 3, 5, 7-9, 11, 13, 15 are analog inputs in all AIOMUX1 
+    // NOTE: AIO1, 3, 5, 7-9, 11, 13, 15 are analog inputs in all AIOMUX1
     // configurations. Comment out other unwanted lines.
     //
-    
+
     //
     // Configure AIO2 for A2 (analog input) operation
     //
-    GpioCtrlRegs.AIOMUX1.bit.AIO2 = 2;    
-    
+    GpioCtrlRegs.AIOMUX1.bit.AIO2 = 2;
+
     //
     // Configure AIO4 for A4 (analog input) operation
     //
-    GpioCtrlRegs.AIOMUX1.bit.AIO4 = 2;    
-    
+    GpioCtrlRegs.AIOMUX1.bit.AIO4 = 2;
+
     //
     // Configure AIO6 for A6 (analog input) operation
     //
-    GpioCtrlRegs.AIOMUX1.bit.AIO6 = 2;    
-    
+    GpioCtrlRegs.AIOMUX1.bit.AIO6 = 2;
+
     //
     // Configure AIO10 for B2 (analog input) operation
     //
-    GpioCtrlRegs.AIOMUX1.bit.AIO10 = 2;   
-    
+    GpioCtrlRegs.AIOMUX1.bit.AIO10 = 2;
+
     //
     // Configure AIO12 for B4 (analog input) operation
     //
-    GpioCtrlRegs.AIOMUX1.bit.AIO12 = 2;   
-    
+    GpioCtrlRegs.AIOMUX1.bit.AIO12 = 2;
+
     //
     // Configure AIO14 for B6 (analog input) operation
     //
-    GpioCtrlRegs.AIOMUX1.bit.AIO14 = 2;   
+    GpioCtrlRegs.AIOMUX1.bit.AIO14 = 2;
 
     EDIS;
 }
 
 //
-// AdcoffsetSelfCal- This function re-calibrates the ADC zero offset error by 
-// converting the VREFLO reference with the ADC and modifying the ADCOFFTRIM 
-// register. VREFLO is sampled by the ADC using an internal MUX select which 
+// AdcoffsetSelfCal- This function re-calibrates the ADC zero offset error by
+// converting the VREFLO reference with the ADC and modifying the ADCOFFTRIM
+// register. VREFLO is sampled by the ADC using an internal MUX select which
 // connects VREFLO to A5 without sacrificing an external ADC pin. This function
 // calls two other functions:
 //   - AdcChanSelect(channel) – selects the ADC channel to convert
-//   - AdcConversion() – initiates several ADC conversions and returns the 
+//   - AdcConversion() – initiates several ADC conversions and returns the
 //     average
 //
 void
@@ -163,32 +188,32 @@ AdcOffsetSelfCal()
     Uint16 AdcConvMean;
     EALLOW;
     AdcRegs.ADCCTL1.bit.ADCREFSEL = 0;      // Select internal reference mode
-    
+
     //
     // Select VREFLO internal connection on B5
     //
     AdcRegs.ADCCTL1.bit.VREFLOCONV = 1;
-    
+
     AdcChanSelect(13);                      // Select channel B5 for all SOC
-    
+
     //
     // Apply artificial offset (+80) to account for a negative offset that may
     // reside in the ADC core
     //
     AdcRegs.ADCOFFTRIM.bit.OFFTRIM = 80;
-    
+
     AdcConvMean = AdcConversion();          // Capture ADC conversion on VREFLO
-    
+
     //
     // Set offtrim register with new value (i.e remove artical offset (+80) and
     // create a two's compliment of the offset error)
     //
     AdcRegs.ADCOFFTRIM.bit.OFFTRIM = 80 - AdcConvMean;
-    
+
     //
     // Select external ADCIN5 input pin on B5
     //
-    AdcRegs.ADCCTL1.bit.VREFLOCONV = 0;     
+    AdcRegs.ADCCTL1.bit.VREFLOCONV = 0;
     EDIS;
 }
 
@@ -221,11 +246,11 @@ AdcChanSelect(Uint16 ch_no)
 }
 
 //
-// AdcConversion - This function initiates several ADC conversions and returns 
-// the average. It uses ADCINT1 and ADCINT2 to "ping-pong" between SOC0-7 and 
+// AdcConversion - This function initiates several ADC conversions and returns
+// the average. It uses ADCINT1 and ADCINT2 to "ping-pong" between SOC0-7 and
 // SOC8-15 and is referred to as "ping-pong" sampling.
-//                              IMPORTANT 
-// This function will overwrite previous ADC settings. Recommend saving 
+//                              IMPORTANT
+// This function will overwrite previous ADC settings. Recommend saving
 // previous settings.
 //
 Uint16 AdcConversion(void)
@@ -234,13 +259,13 @@ Uint16 AdcConversion(void)
     Uint32 Sum;
 
     index       = 0;      // initialize index to 0
-    
+
     //
-    // set sample size to 256 
+    // set sample size to 256
     // (**NOTE: Sample size must be multiples of 2^x where is an integer >= 4)
     //
-    SampleSize  = 256;    
-    
+    SampleSize  = 256;
+
     Sum         = 0;     // set sum to 0
     Mean        = 999;   // initialize mean to known value
 
@@ -318,7 +343,7 @@ Uint16 AdcConversion(void)
     //
     // ADC Conversion
     //
-    
+
     //
     // Force Start SOC0-7 to begin ping-pong sampling
     //
@@ -331,14 +356,14 @@ Uint16 AdcConversion(void)
         //
         while (AdcRegs.ADCINTFLG.bit.ADCINT1 == 0)
         {
-            
+
         }
-        
+
         //
         // Must clear ADCINT1 flag since INT1CONT = 0
         //
         AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-        
+
         Sum += AdcResult.ADCRESULT0;
         Sum += AdcResult.ADCRESULT1;
         Sum += AdcResult.ADCRESULT2;
@@ -346,14 +371,14 @@ Uint16 AdcConversion(void)
         Sum += AdcResult.ADCRESULT4;
         Sum += AdcResult.ADCRESULT5;
         Sum += AdcResult.ADCRESULT6;
-        
+
         //
-        // Wait for SOC9 conversion to start, which gives time for SOC7 
+        // Wait for SOC9 conversion to start, which gives time for SOC7
         // conversion result
         //
         while( AdcRegs.ADCSOCFLG1.bit.SOC9 == 1 )
         {
-            
+
         }
         Sum += AdcResult.ADCRESULT7;
 
@@ -362,14 +387,14 @@ Uint16 AdcConversion(void)
         //
         while (AdcRegs.ADCINTFLG.bit.ADCINT2 == 0)
         {
-            
+
         }
-        
+
         //
         // Must clear ADCINT2 flag since INT2CONT = 0
         //
         AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
-        
+
         Sum += AdcResult.ADCRESULT8;
         Sum += AdcResult.ADCRESULT9;
         Sum += AdcResult.ADCRESULT10;
@@ -377,14 +402,14 @@ Uint16 AdcConversion(void)
         Sum += AdcResult.ADCRESULT12;
         Sum += AdcResult.ADCRESULT13;
         Sum += AdcResult.ADCRESULT14;
-        
+
         //
-        // Wait for SOC1 conversion to start, which gives time for SOC15 
+        // Wait for SOC1 conversion to start, which gives time for SOC15
         // conversion result
         //
         while( AdcRegs.ADCSOCFLG1.bit.SOC1 == 1 )
         {
-            
+
         }
         Sum += AdcResult.ADCRESULT15;
 
@@ -419,17 +444,58 @@ Uint16 AdcConversion(void)
     AdcRegs.SOCPRICTL.bit.SOCPRIORITY = 1;
     while( AdcRegs.SOCPRICTL.bit.SOCPRIORITY != 1 );
     {
-        
+
     }
     AdcRegs.SOCPRICTL.bit.SOCPRIORITY = 0;
     while( AdcRegs.SOCPRICTL.bit.SOCPRIORITY != 0 );
     {
-        
+
     }
 
     Mean = Sum / SampleSize;    // Calculate average ADC sample value
 
     return Mean;                // return the average
+}
+
+
+/*
+ * Audio sampling control flow:
+ * Set up buffer to deposit into
+ * Enable timer interrupt
+ * Timer interrupt triggers an SoC
+ * When SoC is complete, and ADC interrupt is triggered
+ * ADC interrupt places sample in buffer
+ * Once the buffer is full, ADC interrupt turns off timer and signals to the main application
+ */
+
+void adc_start_sampling(void *buffer, size_t size) {
+    // Set the ISR state info
+    Sample_Buffer.data = buffer;
+    Sample_Buffer.length = size;
+    Sample_Buffer.index = 0;
+
+    // Start the CPU timer, which triggers the ADC interrupt at regular intervals
+    CpuTimer1Regs.TCR.bit.TSS = 0;
+}
+
+int adc_done_sampling(void) {
+    return Sample_Buffer.length == Sample_Buffer.index;
+}
+
+__interrupt void adc_int1_isr(void) {
+    // Get the converted sample from SOC0 and trim to 8 bits
+    char result = (char)(AdcResult.ADCRESULT0 >> 4);
+
+    // Place the converted sample in the result buffer
+    Sample_Buffer.data[Sample_Buffer.index++] = result;
+
+    // If done, turn off CPU timer 1
+    if (Sample_Buffer.index == Sample_Buffer.length) {
+        CpuTimer1Regs.TCR.bit.TSS = 1;
+    }
+
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;    // clear interrupt
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;  // acknowledge this interrupt with the PIE
 }
 
 //

@@ -253,6 +253,12 @@ void sci_send_buf(const char *buf, size_t length) {
     while (Tx_Isr_State.busy);
 }
 
+void sci_send_string(const char *string) {
+    size_t index;
+    for (index = 0; string[index] != '\0'; index++)
+        sci_send_char(string[index]);
+}
+
 __interrupt void sci_rx_isr(void) {
     // Read the RX buffer register to clear the interrupt
     *Rx_Isr_State.next = SciaRegs.SCIRXBUF.bit.RXDT;

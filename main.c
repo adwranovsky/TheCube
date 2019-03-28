@@ -1,22 +1,18 @@
 /*
  * C2000Ware includes
  */
+#include <string.h>
 #include <DSP28x_Project.h>
 #include <f2802x_globalprototypes.h>
 #include <gpio.h>
 #include "main.h"
 
-/*
- * Forward declarations
- */
-__interrupt void cpu_timer0_isr(void);
-__interrupt void sci_rx_isr(void);
-__interrupt void sci_tx_isr(void);
+volatile char samples[1000];
 
 /**
  * main.c
  */
-int main(void)
+void main(void)
 {
     //
     // WARNING: Always ensure you call memcpy before running any functions from
@@ -25,6 +21,7 @@ int main(void)
     //
 #ifdef _FLASH
     memcpy(&RamfuncsRunStart, &RamfuncsLoadStart, (size_t)&RamfuncsLoadSize);
+    InitFlash();
 #endif
 
     //
@@ -76,9 +73,11 @@ int main(void)
     // ISR functions found within this file.
     //
     EALLOW;    // This is needed to write to EALLOW protected registers
-    PieVectTable.TINT0 = &cpu_timer0_isr;
+    PieVectTable.TINT0     = &cpu_timer0_isr;
+    PieVectTable.TINT1     = &cpu_timer1_isr;
     PieVectTable.SCIRXINTA = &sci_rx_isr;
     PieVectTable.SCITXINTA = &sci_tx_isr;
+    PieVectTable.ADCINT1   = &adc_int1_isr;
     EDIS;      // This is needed to disable write to EALLOW protected registers
 
     //
@@ -90,9 +89,17 @@ int main(void)
 
     //
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
-    // 60MHz CPU Freq, 50 millisecond Period (in uSeconds)
+    // 60MHz CPU Freq, 500 millisecond Period (in uSeconds)
     //
     ConfigCpuTimer(&CpuTimer0, 60, 500000);
+
+    //
+    // Configure CPU-Timer 1 to interrupt every 25 microseconds:
+    // 60MHz CPU Freq, 25 microsecond Period
+    //
+    // This Timer is used to trigger the ADC
+    //
+    ConfigCpuTimer(&CpuTimer1, 60, 25);
 
     //
     // To ensure precise timing, use write-only instructions to write to the
@@ -105,6 +112,7 @@ int main(void)
     // Use write-only instruction to set TSS bit = 0
     //
     CpuTimer0Regs.TCR.all = 0x4001;
+    //CpuTimer1Regs.TCR.all = 0x4001; // adc code will start and stop timer 1
 
     //
     // Step 5. User specific code, enable interrupts
@@ -121,16 +129,18 @@ int main(void)
     //
     // Enable CPU interrupts
     //
-    IER |= M_INT1; // CPU timer 0 comes in on INT1
-    IER |= M_INT9; // SCI interrupts come in on INT9
+    IER |= M_INT1;  // CPU timer 0 and ADC interrupt 1 come in on INT1
+    IER |= M_INT9;  // SCI interrupts come in on INT9
+    IER |= M_INT13; // CPU timer 1 comes in on INT13
 
     //
     // Enable PIE interrupts
     //
-    PieCtrlRegs.PIECTRL.bit.ENPIE = 1; // Enable the PIE block
-    PieCtrlRegs.PIEIER1.bit.INTx7 = 1; // Enable group 1 interrupt 7
-    PieCtrlRegs.PIEIER9.bit.INTx1 = 1; // Enable group 9 interrupt 1 (SCARXINTA)
-    PieCtrlRegs.PIEIER9.bit.INTx2 = 1; // Enable group 9 interrupt 2 (SCATXINTA)
+    PieCtrlRegs.PIECTRL.bit.ENPIE  = 1; // Enable the PIE block
+    PieCtrlRegs.PIEIER1.bit.INTx1  = 1; // Enable group 1 interrupt 1 (ADCINT1)
+    PieCtrlRegs.PIEIER1.bit.INTx7  = 1; // Enable group 1 interrupt 7
+    PieCtrlRegs.PIEIER9.bit.INTx1  = 1; // Enable group 9 interrupt 1 (SCARXINTA)
+    PieCtrlRegs.PIEIER9.bit.INTx2  = 1; // Enable group 9 interrupt 2 (SCATXINTA)
 
     //
     // Enable global Interrupts and higher priority real-time debug events
@@ -139,38 +149,23 @@ int main(void)
     ERTM;           // Enable Global realtime interrupt DBGM
 
     //
-    // Step 6. IDLE loop. Just sit and loop forever (optional)
+    // Step 6. IDLE loop. Just sit and loop forever
     //
     while (1) {
-        //sci_send_char(sci_get_char());
-        char buf[4];
-        sci_get_buf(buf, sizeof buf);
-        //sci_send_buf(buf, sizeof buf);
-        size_t i;
-        for (i = 0; i < sizeof buf; i++) {
-            sci_send_char(buf[i]);
+        if (sci_get_char() == 's') {
+            adc_start_sampling(samples, sizeof samples);
+
+            while (!adc_done_sampling());
+
+            sci_send_string("START\n\r");
+            size_t index;
+            for (index = 0; index < sizeof samples; index++) {
+                sci_send_string(itoa(index, 10));
+                sci_send_string(",");
+                sci_send_string(itoa(samples[index], 10));
+                sci_send_string("\n\r");
+            }
+            sci_send_string("END\n\r");
         }
     }
-
-    return 0;
-}
-
-/*
- * cpu_timer0_isr
- *
- * Toggles GPIO0
- */
-__interrupt void cpu_timer0_isr(void)
-{
-    CpuTimer0.InterruptCount++;
-
-    //
-    // Toggle GPIO0 once per 500 milliseconds
-    //
-    GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;
-
-    //
-    // Acknowledge this interrupt to receive more interrupts from group 1
-    //
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
 }

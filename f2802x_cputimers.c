@@ -194,6 +194,35 @@ ConfigCpuTimer(struct CPUTIMER_VARS *Timer, float Freq, float Period)
     Timer->InterruptCount = 0;
 }
 
+/*
+ * cpu_timer0_isr
+ *
+ * Toggles GPIO0
+ */
+__interrupt void cpu_timer0_isr(void) {
+    CpuTimer0.InterruptCount++;
+
+    //
+    // Toggle GPIO0 once per 500 milliseconds
+    //
+    GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;
+
+    //
+    // Acknowledge this interrupt to receive more interrupts from group 1
+    //
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
+}
+
+/*
+ * cpu_timer1_isr
+ *
+ * CPU timer 1 triggers an ADC SoC. Nothing needs to happen within the ISR itself.
+ * Note that this is NOT a PIE interrupt, so PIEACK doesn't need to be written to.
+ */
+__interrupt void cpu_timer1_isr(void) {
+    CpuTimer1.InterruptCount++;
+}
+
 //
 // End of file
 //
