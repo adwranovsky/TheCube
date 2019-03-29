@@ -54,7 +54,7 @@
 static struct {
     volatile size_t index;
     size_t length;
-    volatile char *data;
+    volatile uint32_t *data;
 } Sample_Buffer;
 
 //
@@ -460,18 +460,22 @@ Uint16 AdcConversion(void)
 
 /*
  * Audio sampling control flow:
- * Set up buffer to deposit into
- * Enable timer interrupt
- * Timer interrupt triggers an SoC
- * When SoC is complete, and ADC interrupt is triggered
- * ADC interrupt places sample in buffer
- * Once the buffer is full, ADC interrupt turns off timer and signals to the main application
+ * 1. Set up sample buffer
+ * 2. Enable timer interrupt
+ * 3. Timer interrupt triggers an SoC
+ * 4. When SoC is complete, and ADC interrupt is triggered
+ * 5. ADC interrupt places sample in buffer
+ * 6. Once the buffer is full, ADC interrupt turns off timer and signals to the main application
  */
+void adc_start_sampling(volatile uint32_t *buffer, size_t length) {
+    // Since the ADC interrupt stuffs a 0 valued imaginary component after each
+    // real-valued sample, the length must be even
+    if (length % 2)
+        return;
 
-void adc_start_sampling(void *buffer, size_t size) {
     // Set the ISR state info
     Sample_Buffer.data = buffer;
-    Sample_Buffer.length = size;
+    Sample_Buffer.length = length;
     Sample_Buffer.index = 0;
 
     // Start the CPU timer, which triggers the ADC interrupt at regular intervals
@@ -483,13 +487,23 @@ int adc_done_sampling(void) {
 }
 
 __interrupt void adc_int1_isr(void) {
-    // Get the converted sample from SOC0 and trim to 8 bits
-    char result = (char)(AdcResult.ADCRESULT0 >> 4);
+    // Get the converted sample from SOC0
+    uint32_t result = AdcResult.ADCRESULT0;
 
-    // Place the converted sample in the result buffer
-    Sample_Buffer.data[Sample_Buffer.index++] = result;
+    // Place the converted 12-bit sample in the buffer. Put the most
+    // significant bit of the sample in bit 31 of the result. We do this
+    // because the FFT library uses a Q30 fixed point number representation,
+    // which places the decimal point between bits 31 and 30. Shifting over the
+    // sample allows us to use the full range of fixed point values possible.
+    Sample_Buffer.data[Sample_Buffer.index++] = result << 20;
 
-    // If done, turn off CPU timer 1
+    // The complex FFT requires that the imaginary component come right after
+    // the real component. Since this is a real signal, the imaginary component
+    // is 0.
+    Sample_Buffer.data[Sample_Buffer.index++] = 0;
+
+    // If done, turn off CPU timer 1. CPU timer 1 triggers the start of an ADC
+    // sample, so turning it off stops ADC sampling.
     if (Sample_Buffer.index == Sample_Buffer.length) {
         CpuTimer1Regs.TCR.bit.TSS = 1;
     }

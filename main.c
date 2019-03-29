@@ -1,171 +1,39 @@
 /*
- * C2000Ware includes
+ * Author: Alex Wranovsky
  */
-#include <string.h>
-#include <DSP28x_Project.h>
-#include <f2802x_globalprototypes.h>
-#include <gpio.h>
+
 #include "main.h"
 
-volatile char samples[1000];
-
-/**
- * main.c
- */
 void main(void)
 {
-    //
-    // WARNING: Always ensure you call memcpy before running any functions from
-    // RAM InitSysCtrl includes a call to a RAM based function and without a
-    // call to memcpy first, the processor will go "into the weeds"
-    //
-#ifdef _FLASH
-    memcpy(&RamfuncsRunStart, &RamfuncsLoadStart, (size_t)&RamfuncsLoadSize);
-    InitFlash();
-#endif
+    // Do all peripheral and CPU initialization. This function must be called
+    // before other code is run.
+    sys_init();
 
-    //
-    // Step 1. Initialize System Control:
-    // PLL, WatchDog, enable Peripheral Clocks
-    // This example function is found in the f2802x_SysCtrl.c file.
-    //
-    InitSysCtrl();
-
-    //
-    // Step 2. Initialize GPIO:
-    // This example function is found in the f2802x_Gpio.c file and
-    // illustrates how to set the GPIO to it's default state.
-    //
-    InitGpio();
-
-    //
-    // Step 3. Clear all interrupts and initialize PIE vector table:
-    // Disable CPU interrupts
-    //
-    DINT;
-
-    //
-    // Initialize the PIE control registers to their default state.
-    // The default state is all PIE interrupts disabled and flags
-    // are cleared.
-    // This function is found in the f2802x_PieCtrl.c file.
-    //
-    InitPieCtrl();
-
-    //
-    // Disable CPU interrupts and clear all CPU interrupt flags
-    //
-    IER = 0x0000;
-    IFR = 0x0000;
-
-    //
-    // Initialize the PIE vector table with pointers to the shell Interrupt
-    // Service Routines (ISR).
-    // This will populate the entire table, even if the interrupt
-    // is not used in this example.  This is useful for debug purposes.
-    // The shell ISR routines are found in f2802x_DefaultIsr.c.
-    // This function is found in f2802x_PieVect.c.
-    //
-    InitPieVectTable();
-
-    //
-    // Interrupts that are used in this example are re-mapped to
-    // ISR functions found within this file.
-    //
-    EALLOW;    // This is needed to write to EALLOW protected registers
-    PieVectTable.TINT0     = &cpu_timer0_isr;
-    PieVectTable.TINT1     = &cpu_timer1_isr;
-    PieVectTable.SCIRXINTA = &sci_rx_isr;
-    PieVectTable.SCITXINTA = &sci_tx_isr;
-    PieVectTable.ADCINT1   = &adc_int1_isr;
-    EDIS;      // This is needed to disable write to EALLOW protected registers
-
-    //
-    // Step 4. Initialize the Device Peripherals.
-    //
-    InitCpuTimers();
-    InitAdc();
-    InitSci();
-
-    //
-    // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
-    // 60MHz CPU Freq, 500 millisecond Period (in uSeconds)
-    //
-    ConfigCpuTimer(&CpuTimer0, 60, 500000);
-
-    //
-    // Configure CPU-Timer 1 to interrupt every 25 microseconds:
-    // 60MHz CPU Freq, 25 microsecond Period
-    //
-    // This Timer is used to trigger the ADC
-    //
-    ConfigCpuTimer(&CpuTimer1, 60, 25);
-
-    //
-    // To ensure precise timing, use write-only instructions to write to the
-    // entire register. Therefore, if any of the configuration bits are changed
-    // in ConfigCpuTimer and InitCpuTimers (in f2802x_CpuTimers.h), the
-    // below settings must also be updated.
-    //
-
-    //
-    // Use write-only instruction to set TSS bit = 0
-    //
-    CpuTimer0Regs.TCR.all = 0x4001;
-    //CpuTimer1Regs.TCR.all = 0x4001; // adc code will start and stop timer 1
-
-    //
-    // Step 5. User specific code, enable interrupts
-    //
-
-    //
-    // Configure GPIO0 as a GPIO output pin
-    //
-    EALLOW;
-    GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 0;
-    GpioCtrlRegs.GPADIR.bit.GPIO0 = 1;
-    EDIS;
-
-    //
-    // Enable CPU interrupts
-    //
-    IER |= M_INT1;  // CPU timer 0 and ADC interrupt 1 come in on INT1
-    IER |= M_INT9;  // SCI interrupts come in on INT9
-    IER |= M_INT13; // CPU timer 1 comes in on INT13
-
-    //
-    // Enable PIE interrupts
-    //
-    PieCtrlRegs.PIECTRL.bit.ENPIE  = 1; // Enable the PIE block
-    PieCtrlRegs.PIEIER1.bit.INTx1  = 1; // Enable group 1 interrupt 1 (ADCINT1)
-    PieCtrlRegs.PIEIER1.bit.INTx7  = 1; // Enable group 1 interrupt 7
-    PieCtrlRegs.PIEIER9.bit.INTx1  = 1; // Enable group 9 interrupt 1 (SCARXINTA)
-    PieCtrlRegs.PIEIER9.bit.INTx2  = 1; // Enable group 9 interrupt 2 (SCATXINTA)
-
-    //
-    // Enable global Interrupts and higher priority real-time debug events
-    //
-    EINT;           // Enable Global interrupt INTM
-    ERTM;           // Enable Global realtime interrupt DBGM
-
-    //
-    // Step 6. IDLE loop. Just sit and loop forever
-    //
+    // Begin application code
     while (1) {
         if (sci_get_char() == 's') {
-            adc_start_sampling(samples, sizeof samples);
+            //adc_start_sampling(buffer1, LENGTH(buffer1));
+            //while (!adc_done_sampling());
 
-            while (!adc_done_sampling());
-
-            sci_send_string("START\n\r");
-            size_t index;
-            for (index = 0; index < sizeof samples; index++) {
-                sci_send_string(itoa(index, 10));
-                sci_send_string(",");
-                sci_send_string(itoa(samples[index], 10));
-                sci_send_string("\n\r");
+            // Generate a test square wave
+            size_t i;
+            for (i = 0; i < FFT_SIZE; i++) {
+                size_t j;
+                // Generate 64 samples of a high signal
+                for (j = i + 64; i < j; i++) {
+                    buffer1[i] = 0x7FFFFFFF;
+                }
+                // Generate 64 samples of a low signal
+                for (j = i + 64; i < j; i++) {
+                    buffer1[i] = 0x00000000;
+                }
             }
-            sci_send_string("END\n\r");
+
+            // It's ok to throw away the volatile qualifier here, since the ADC isn't sampling
+            cfft((int32_t *)buffer1, (int32_t *)buffer2);
+            print_time_domain((int32_t *)buffer1);
+            print_freq_domain((int32_t *)buffer2);
         }
     }
 }

@@ -154,6 +154,11 @@ SECTIONS
    IQmath              : > FLASHA       PAGE = 0            /* Math Code */
    IQmathTables        : > IQTABLES,    PAGE = 0, TYPE = NOLOAD
 
+   /* Allocate CFFT areas
+      FFTtf: FFT twiddle factor
+    */
+   FFTtf			   : > FLASHB       PAGE = 1
+
    /* Uncomment the section below if calling the IQNexp() or IQexp()
       functions from the IQMath.lib library in order to utilize the
       relevant IQ Math table in Boot ROM (This saves space and Boot ROM
