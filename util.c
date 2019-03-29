@@ -10,6 +10,10 @@ const char *itoa(int32_t num, int base) {
     if (base > 16 || base < 2)
         return "Base must be between 2 and 16.";
 
+    // Treat 0 specially
+    if (num == 0)
+        return "0";
+
     // Long enough to fit all 32 bit signed integers in any base from 2 to 16
     static char string[34];
 
