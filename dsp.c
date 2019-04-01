@@ -36,14 +36,18 @@ void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer) {
 void cfft(int32_t *fft_comp_buffer) {
     // Set the buffers, and calculate the FFT
     cfft_control.ipcbptr = fft_comp_buffer;
+    cfft_control.magptr = fft_comp_buffer;
     cfft_control.init(&cfft_control);
     cfft_control.calc(&cfft_control);
+    cfft_control.mag(&cfft_control);
 }
 
 void print_time_domain(int32_t *sample_buffer) {
     sci_send_string("START TIME DOMAIN\n\r");
     size_t index;
     for (index = 0; index < FFT_SIZE*2; index+=2) {
+        sci_send_string(itoa(index, 10));
+        sci_send_string(", ");
         sci_send_string(itoa(sample_buffer[index], 10));
         sci_send_string("\n\r");
     }
@@ -53,8 +57,8 @@ void print_time_domain(int32_t *sample_buffer) {
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate) {
     sci_send_string("START FREQ DOMAIN\n\r");
     size_t index;
-    for (index = 0; index < FFT_SIZE*2; index++) {
-        sci_send_string(itoa(index, 10));
+    for (index = 0; index < FFT_SIZE/2; index++) {
+        sci_send_string(itoa((index*sample_rate)/FFT_SIZE, 10));
         sci_send_string(", ");
         sci_send_string(itoa(fft_comp_buffer[index], 10));
         sci_send_string("\n\r");

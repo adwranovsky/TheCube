@@ -19,18 +19,16 @@ void main(void)
 
             // Generate a test square wave
             size_t i;
+            int32_t val1 = 0x7fffffff;
+            int32_t val2 = 0;
             for (i = 0; i < FFT_SIZE*2; i++) {
-                size_t j;
-                // Generate 32 samples of a high signal
-                for (j = i + 32; i < j; i++) {
-                    sample_buffer[i++] = 0x7FFFFFFF;
-                    sample_buffer[i] = 0x00000000; // complex part
+                if( (i>>1)%8 == 0 ) {
+                    int32_t tmp = val1;
+                    val1 = val2;
+                    val2 = tmp;
                 }
-                // Generate 32 samples of a low signal
-                for (j = i + 32; i < j; i++) {
-                    sample_buffer[i++] = 0x00000000;
-                    sample_buffer[i] = 0x00000000; // complex part
-                }
+                sample_buffer[i++] = val1; // real component
+                sample_buffer[i] = 0;      // complex component
             }
 
             // Do the bit reversal
