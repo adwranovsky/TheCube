@@ -22,9 +22,9 @@ void adc_start_sampling(volatile uint32_t *buffer, size_t length);
 int adc_done_sampling(void);
 
 // DSP utilities
-#define FFT_SIZE 1024
-extern volatile int32_t buffer1[FFT_SIZE];
-extern volatile int32_t buffer2[FFT_SIZE];
+#define FFT_SIZE 256
+extern int32_t fft_comp_buffer[FFT_SIZE*2];
+extern volatile int32_t sample_buffer[FFT_SIZE*2];
 union Chromagraph {
     struct {
         uint32_t Aflat;
@@ -42,9 +42,10 @@ union Chromagraph {
     } note;
     uint32_t array[12];
 };
-void cfft(int32_t *time_domain_buffer, int32_t *freq_domain_buffer);
-void print_time_domain(int32_t *time_domain_buffer);
-void print_freq_domain(int32_t *freq_domain_buffer);
+void cfft(int32_t *fft_comp_buffer);
+void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer);
+void print_time_domain(int32_t *sample_buffer);
+void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
 
 // utility functions
 const char *itoa(int32_t num, int base);

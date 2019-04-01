@@ -155,9 +155,13 @@ SECTIONS
    IQmathTables        : > IQTABLES,    PAGE = 0, TYPE = NOLOAD
 
    /* Allocate CFFT areas
-      FFTtf: FFT twiddle factor
+      FFTtf:      FFT twiddle factor
+      FFTcomp:    FFT computation buffer
+      FFTsamples: ADC sample buffer
     */
-   FFTtf			   : > FLASHB       PAGE = 1
+   FFTtf			   :     > FLASHB       PAGE = 1
+   FFTcomp  ALIGN(512) : { } > DRAML0       PAGE = 1
+   FFTsamples          :     > RAMM1        PAGE = 1
 
    /* Uncomment the section below if calling the IQNexp() or IQexp()
       functions from the IQMath.lib library in order to utilize the

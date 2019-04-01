@@ -2,6 +2,7 @@
  * Author: Alex Wranovsky
  */
 
+#include <fft.h>
 #include "main.h"
 
 void main(void)
@@ -18,22 +19,26 @@ void main(void)
 
             // Generate a test square wave
             size_t i;
-            for (i = 0; i < FFT_SIZE; i++) {
+            for (i = 0; i < FFT_SIZE*2; i++) {
                 size_t j;
-                // Generate 64 samples of a high signal
-                for (j = i + 64; i < j; i++) {
-                    buffer1[i] = 0x7FFFFFFF;
+                // Generate 32 samples of a high signal
+                for (j = i + 32; i < j; i++) {
+                    sample_buffer[i++] = 0x7FFFFFFF;
+                    sample_buffer[i] = 0x00000000; // complex part
                 }
-                // Generate 64 samples of a low signal
-                for (j = i + 64; i < j; i++) {
-                    buffer1[i] = 0x00000000;
+                // Generate 32 samples of a low signal
+                for (j = i + 32; i < j; i++) {
+                    sample_buffer[i++] = 0x00000000;
+                    sample_buffer[i] = 0x00000000; // complex part
                 }
             }
 
-            // It's ok to throw away the volatile qualifier here, since the ADC isn't sampling
-            cfft((int32_t *)buffer1, (int32_t *)buffer2);
-            print_time_domain((int32_t *)buffer1);
-            print_freq_domain((int32_t *)buffer2);
+            // Do the bit reversal
+            bit_reversal(sample_buffer, fft_comp_buffer);
+
+            cfft(fft_comp_buffer);
+            print_time_domain((int32_t *)sample_buffer); // discard volatile qualifier
+            print_freq_domain(fft_comp_buffer, 40000);
         }
     }
 }
