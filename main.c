@@ -4,12 +4,15 @@
 
 #include <fft.h>
 #include "main.h"
-
+#include "spi.h"
 void main(void)
 {
     // Do all peripheral and CPU initialization. This function must be called
     // before other code is run.
     sys_init();
+
+    //michael doing a SPI test
+   // SPI_write_16(0x1234);
 
     // Begin application code
     while (1) {

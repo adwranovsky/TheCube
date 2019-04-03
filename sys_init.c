@@ -83,7 +83,9 @@ void sys_init(void) {
     InitCpuTimers();
     InitAdc();
     InitSci();
-
+    InitSpi();
+    InitSpiGpio();
+    InitSpiFifos();
     //
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
     // 60MHz CPU Freq, 500 millisecond Period (in uSeconds)
