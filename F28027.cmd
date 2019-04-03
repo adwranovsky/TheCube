@@ -45,7 +45,7 @@
 /* 2) In your project add the path to <base>\DSP2802x_headers\cmd to the
    library search path under project->build options, linker tab,
    library search path (-i).
-/*========================================================= */
+========================================================= */
 
 /* Define the memory block start/length for the F28027
    PAGE 0 will be used to organize program sections
@@ -155,13 +155,15 @@ SECTIONS
    IQmathTables        : > IQTABLES,    PAGE = 0, TYPE = NOLOAD
 
    /* Allocate CFFT areas
+      FFTlib:     The actual program code of the library. It didin't fit with the rest of our code in FLASHA.
       FFTtf:      FFT twiddle factor
       FFTcomp:    FFT computation buffer
       FFTsamples: ADC sample buffer
     */
-   FFTtf			   :     > FLASHB       PAGE = 1
-   FFTcomp  ALIGN(512) : { } > DRAML0       PAGE = 1
-   FFTsamples          :     > RAMM1        PAGE = 1
+   FFTlib              : {c28x_fixedpoint_dsp_library.lib<*.obj>(.text)} > FLASHC  PAGE = 0
+   FFTtf			   :                                                 > FLASHB  PAGE = 1
+   FFTcomp  ALIGN(512) : { }                                             > DRAML0  PAGE = 1
+   FFTsamples          :                                                 > RAMM1   PAGE = 1
 
    /* Uncomment the section below if calling the IQNexp() or IQexp()
       functions from the IQMath.lib library in order to utilize the
@@ -195,7 +197,7 @@ SECTIONS
    */
 
    /* .reset is a standard section used by the compiler.  It contains the */
-   /* the address of the start of _c_int00 for C Code.   /*
+   /* the address of the start of _c_int00 for C Code.   */
    /* When using the boot ROM this section and the CPU vector */
    /* table is not needed.  Thus the default type is set here to  */
    /* DSECT  */

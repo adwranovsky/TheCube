@@ -1,6 +1,9 @@
 /*
  * Author: Alex Wranovsky
  */
+#ifndef MAIN_H_
+#define MAIN_H_
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -56,3 +59,5 @@ __interrupt void sci_tx_isr(void);
 __interrupt void cpu_timer0_isr(void);
 __interrupt void cpu_timer1_isr(void);
 __interrupt void adc_int1_isr(void);
+
+#endif
