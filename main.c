@@ -3,6 +3,7 @@
  */
 
 #include <fft.h>
+#include <string.h>
 #include "main.h"
 
 void main(void)
@@ -14,27 +15,17 @@ void main(void)
     // Begin application code
     while (1) {
         if (sci_get_char() == 's') {
-            //adc_start_sampling(buffer1, LENGTH(buffer1));
-            //while (!adc_done_sampling());
-
-            // Generate a test square wave
-            size_t i;
-            int32_t val1 = 0x7fffffff;
-            int32_t val2 = 0;
-            for (i = 0; i < FFT_SIZE*2; i++) {
-                if( (i>>1)%8 == 0 ) {
-                    int32_t tmp = val1;
-                    val1 = val2;
-                    val2 = tmp;
-                }
-                sample_buffer[i++] = val1; // real component
-                sample_buffer[i] = 0;      // complex component
-            }
+            // Tell the ADC to fill the buffer
+            adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
+            while (!adc_done_sampling());
 
             // Do the bit reversal
             bit_reversal(sample_buffer, fft_comp_buffer);
 
+            // Perform FFT
             cfft(fft_comp_buffer);
+
+            // Print out waveform and FFT for debug
             print_time_domain((int32_t *)sample_buffer); // discard volatile qualifier
             print_freq_domain(fft_comp_buffer, 40000);
         }

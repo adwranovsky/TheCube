@@ -21,7 +21,7 @@ void sci_send_char(char c);
 void sci_send_string(const char *string);
 
 // ADC functions
-void adc_start_sampling(volatile uint32_t *buffer, size_t length);
+void adc_start_sampling(volatile int32_t *buffer, size_t length);
 int adc_done_sampling(void);
 
 // DSP utilities
@@ -51,7 +51,7 @@ void print_time_domain(int32_t *sample_buffer);
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
 
 // utility functions
-const char *itoa(int32_t num, int base);
+const char *itoa(int32_t num, int is_signed, int base);
 
 // ISRs
 __interrupt void sci_rx_isr(void);

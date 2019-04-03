@@ -4,9 +4,9 @@
 
 #include "main.h"
 
-// Converts a 32 bit signed number into an ascii string
+// Converts a 32 bit number into an ascii string
 // NOT REENTRANT
-const char *itoa(int32_t num, int base) {
+const char *itoa(int32_t num, int is_signed, int base) {
     if (base > 16 || base < 2)
         return "Base must be between 2 and 16.";
 
@@ -19,9 +19,10 @@ const char *itoa(int32_t num, int base) {
 
     // The function only works on unsigned numbers, so negate and remember if necessary
     int is_negative = 0;
-    if (num < 0) {
+    uint32_t num_unsigned = num;
+    if (is_signed && num < 0) {
         is_negative = 1;
-        num = -num;
+        num_unsigned = -num;
     }
 
     // Initialize the buffer
@@ -29,9 +30,9 @@ const char *itoa(int32_t num, int base) {
     string[index--] = '\0';
 
     // Convert num to a string
-    while (num) {
-        string[index--] = "0123456789abcdef"[num % base];
-        num /= base;
+    while (num_unsigned) {
+        string[index--] = "0123456789abcdef"[num_unsigned % base];
+        num_unsigned /= base;
     }
 
     // Insert the negative sign if necessary

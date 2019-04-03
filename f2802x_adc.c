@@ -54,7 +54,7 @@
 static struct {
     volatile size_t index;
     size_t length;
-    volatile uint32_t *data;
+    volatile int32_t *data;
 } Sample_Buffer;
 
 //
@@ -467,7 +467,7 @@ Uint16 AdcConversion(void)
  * 5. ADC interrupt places sample in buffer
  * 6. Once the buffer is full, ADC interrupt turns off timer and signals to the main application
  */
-void adc_start_sampling(volatile uint32_t *buffer, size_t length) {
+void adc_start_sampling(volatile int32_t *buffer, size_t length) {
     // Since the ADC interrupt stuffs a 0 valued imaginary component after each
     // real-valued sample, the length must be even
     if (length % 2)
@@ -495,7 +495,7 @@ __interrupt void adc_int1_isr(void) {
     // because the FFT library uses a Q30 fixed point number representation,
     // which places the decimal point between bits 31 and 30. Shifting over the
     // sample allows us to use the full range of fixed point values possible.
-    Sample_Buffer.data[Sample_Buffer.index++] = result << 20;
+    Sample_Buffer.data[Sample_Buffer.index++] = result << 15;
 
     // The complex FFT requires that the imaginary component come right after
     // the real component. Since this is a real signal, the imaginary component
