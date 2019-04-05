@@ -24,6 +24,10 @@ void sci_send_string(const char *string);
 void adc_start_sampling(volatile int32_t *buffer, size_t length);
 int adc_done_sampling(void);
 
+// SPI functions
+void InitSpiFifos(void);
+void SPI_write_16(const uint16_t data);
+
 // DSP utilities
 #define FFT_SIZE 256
 extern int32_t fft_comp_buffer[FFT_SIZE*2];
