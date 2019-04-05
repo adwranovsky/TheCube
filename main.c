@@ -27,7 +27,7 @@ void main(void)
 
             // Print out waveform and FFT for debug
             print_time_domain((int32_t *)sample_buffer); // discard volatile qualifier
-            print_freq_domain(fft_comp_buffer, 40000);
+            print_freq_domain(fft_comp_buffer, 1000);
         }
     }
 }
