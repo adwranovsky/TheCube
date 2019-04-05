@@ -516,11 +516,6 @@ __interrupt void adc_int1_isr(void) {
         // sample allows us to take advantage of more bits.
         Sample_Buffer.data[Sample_Buffer.index++] = result << 15;
 
-        // The complex FFT requires that the imaginary component come right after
-        // the real component. Since this is a real signal, the imaginary component
-        // is 0.
-        Sample_Buffer.data[Sample_Buffer.index++] = 0;
-
         // If done, turn off CPU timer 1. CPU timer 1 triggers the start of an ADC
         // sample, so turning it off stops ADC sampling.
         if (Sample_Buffer.index == Sample_Buffer.length) {

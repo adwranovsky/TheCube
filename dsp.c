@@ -5,55 +5,54 @@
 /*
  * The FFT requires that the computation buffer be in bit-reverse order. To do
  * this properly, the buffer's address must be a multple of 2*FFT_SIZE. Use
- * CFFT32_brev() to do the actual bit reversing.
+ * RFFT32_brev() to do the actual bit reversing.
  */
 #pragma DATA_SECTION(fft_comp_buffer, "FFTcomp")
-int32_t fft_comp_buffer[FFT_SIZE*2];
+int32_t fft_comp_buffer[FFT_SIZE+2];
 
 /*
  * Put samples from the ADC in sample_buffer, and use fft_output_buffer for the
  * FFT output.
  */
 #pragma DATA_SECTION(sample_buffer, "FFTsamples")
-volatile int32_t sample_buffer[FFT_SIZE*2];
+volatile int32_t sample_buffer[FFT_SIZE];
 
-// Make sure to have CFFT defaults match FFT_SIZE
-CFFT32 cfft_control = CFFT32_256P_DEFAULTS;
-//const int32_t win[FFT_SIZE/2] = HAMMING256;
+// Make sure to have FFT defaults match FFT_SIZE
+RFFT32 rfft_control = RFFT32_128P_DEFAULTS;
 
 /*
  * Wrapper around the DSP library bit reversal function
  */
 void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer) {
-    // clean up the computation buffer
-    size_t i;
-    for (i = 0; i < FFT_SIZE*2; i++) {
+    // Clean up computation buffer
+    int32_t i;
+    for (i=0; i<FFT_SIZE+2; i++) {
         fft_comp_buffer[i] = 0;
     }
-    // Perform bit reversal necessary for complex FFT. Discard volatile qualifier
-    CFFT32_brev((int32_t *)sample_buffer, fft_comp_buffer, FFT_SIZE);
-    CFFT32_brev((int32_t *)sample_buffer+1, fft_comp_buffer+1, FFT_SIZE);
+
+    // Perform bit reversal necessary for real FFT. Discard volatile qualifier
+    RFFT32_brev((int32_t *)sample_buffer, fft_comp_buffer, FFT_SIZE);
 }
 
 /*
  * Computes the complex frequencies from the ADC samples. ONLY use a properly
  * aligned buffer for time_domain_buffer.
  */
-void cfft(int32_t *fft_comp_buffer) {
-    // Set the buffers, and calculate the FFT
-    cfft_control.ipcbptr = fft_comp_buffer;
-    cfft_control.magptr = fft_comp_buffer;
-    //cfft_control.winptr = win;
-    cfft_control.init(&cfft_control);
-    //cfft_control.win(&cfft_control);
-    cfft_control.calc(&cfft_control);
-    cfft_control.mag(&cfft_control);
+void rfft(int32_t *fft_comp_buffer) {
+    // Set the buffer, and calculate the FFT
+    rfft_control.ipcbptr = fft_comp_buffer;
+    rfft_control.magptr = fft_comp_buffer;
+    rfft_control.init(&rfft_control);
+
+    rfft_control.calc(&rfft_control);
+    rfft_control.split(&rfft_control);
+    rfft_control.mag(&rfft_control);
 }
 
 void print_time_domain(int32_t *sample_buffer) {
     sci_send_string("START TIME DOMAIN\n\r");
     size_t index;
-    for (index = 0; index < FFT_SIZE*2; index+=2) {
+    for (index = 0; index < FFT_SIZE; index++) {
         sci_send_string(itoa(index/2, 0, 10));
         sci_send_string(", ");
         sci_send_string(itoa(sample_buffer[index], 0, 10));
