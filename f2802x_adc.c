@@ -505,7 +505,7 @@ __interrupt void adc_int1_isr(void) {
         uint32_t result = 0;
         uint16_t i;
         for (i = 0; i < LENGTH(buffer); i++) {
-            result += buffer[i];
+            result += buffer[i]; // unlikely to overflow, since these are 12 bit ADC samples, going into a 32 bit wide integer
         }
         result /= LENGTH(buffer);
 

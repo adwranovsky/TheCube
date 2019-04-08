@@ -149,7 +149,7 @@ SECTIONS
       FFTsamples: ADC sample buffer
     */
    FFTtf			   :     > FLASHB  PAGE = 1
-   FFTcomp  ALIGN(256) : { } > DRAML0  PAGE = 1
+   FFTcomp  ALIGN(128) : { } > DRAML0  PAGE = 1
    FFTsamples          :     > RAMM1   PAGE = 1
 
    /* Uncomment the section below if calling the IQNexp() or IQexp()
