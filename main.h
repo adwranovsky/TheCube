@@ -29,30 +29,14 @@ void InitSpiFifos(void);
 void SPI_write_16(const uint16_t data);
 
 // DSP utilities
-#define FFT_SIZE 256
-extern int32_t fft_comp_buffer[FFT_SIZE*2];
-extern volatile int32_t sample_buffer[FFT_SIZE*2];
-union Chromagraph {
-    struct {
-        uint32_t Aflat;
-        uint32_t A;
-        uint32_t Bflat;
-        uint32_t B;
-        uint32_t C;
-        uint32_t Dflat;
-        uint32_t D;
-        uint32_t Eflat;
-        uint32_t E;
-        uint32_t F;
-        uint32_t Gflat;
-        uint32_t G;
-    } note;
-    uint32_t array[12];
-};
-void cfft(int32_t *fft_comp_buffer);
+#define FFT_SIZE 64
+extern int32_t fft_comp_buffer[FFT_SIZE+2];
+extern volatile int32_t sample_buffer[FFT_SIZE];
+void rfft(int32_t *fft_comp_buffer);
 void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer);
 void print_time_domain(int32_t *sample_buffer);
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
+uint32_t detect_beat(const int32_t *frequencies);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);

@@ -117,25 +117,14 @@ SECTIONS
    .text               : > FLASHA       PAGE = 0
    codestart           : > BEGIN        PAGE = 0
 
-#ifdef __TI_COMPILER_VERSION__
-   #if __TI_COMPILER_VERSION__ >= 15009000
-    .TI.ramfunc : {} LOAD = FLASHA,
-                         RUN = PRAML0,
-                         LOAD_START(_RamfuncsLoadStart),
-                         LOAD_END(_RamfuncsLoadEnd),
-                         RUN_START(_RamfuncsRunStart),
-                         LOAD_SIZE(_RamfuncsLoadSize),
-                         PAGE = 0
-   #else
-   ramfuncs            : LOAD = FLASHA,
-                         RUN = PRAML0,
-                         LOAD_START(_RamfuncsLoadStart),
-                         LOAD_END(_RamfuncsLoadEnd),
-                         RUN_START(_RamfuncsRunStart),
-                         LOAD_SIZE(_RamfuncsLoadSize),
-                         PAGE = 0   
-   #endif
-#endif                           
+   /* Put FFT lib in ramfuncs as well */
+    .TI.ramfunc : {c28x_fixedpoint_dsp_library.lib<*.obj>(.text)} LOAD = FLASHA,
+                                                                  RUN = PRAML0,
+                                                                  LOAD_START(_RamfuncsLoadStart),
+                                                                  LOAD_END(_RamfuncsLoadEnd),
+                                                                  RUN_START(_RamfuncsRunStart),
+                                                                  LOAD_SIZE(_RamfuncsLoadSize),
+                                                                  PAGE = 0
                          
    csmpasswds          : > CSM_PWL_P0   PAGE = 0
    csm_rsvd            : > CSM_RSVD     PAGE = 0
@@ -155,15 +144,13 @@ SECTIONS
    IQmathTables        : > IQTABLES,    PAGE = 0, TYPE = NOLOAD
 
    /* Allocate CFFT areas
-      FFTlib:     The actual program code of the library. It didin't fit with the rest of our code in FLASHA.
       FFTtf:      FFT twiddle factor
       FFTcomp:    FFT computation buffer
       FFTsamples: ADC sample buffer
     */
-   FFTlib              : {c28x_fixedpoint_dsp_library.lib<*.obj>(.text)} > FLASHC  PAGE = 0
-   FFTtf			   :                                                 > FLASHB  PAGE = 1
-   FFTcomp  ALIGN(512) : { }                                             > DRAML0  PAGE = 1
-   FFTsamples          :                                                 > RAMM1   PAGE = 1
+   FFTtf			   :     > FLASHB  PAGE = 1
+   FFTcomp  ALIGN(128) : { } > DRAML0  PAGE = 1
+   FFTsamples          :     > RAMM1   PAGE = 1
 
    /* Uncomment the section below if calling the IQNexp() or IQexp()
       functions from the IQMath.lib library in order to utilize the

@@ -45,6 +45,7 @@
 //
 #include "F2802x_Device.h"     // Headerfile Include File
 #include "f2802x_examples.h"   // Examples Include File
+#include "main.h"
 
 //
 // Defines
@@ -486,26 +487,40 @@ int adc_done_sampling(void) {
     return Sample_Buffer.length == Sample_Buffer.index;
 }
 
+/*
+ * The ADC is set up to sample at 40 KHz. It then averages every 40 samples together to achieve an effective sample rate of 1 KHz
+ */
 __interrupt void adc_int1_isr(void) {
+    // sample buffer for averaging the last several samples together
+    static uint16_t buffer[40];
+    static uint16_t index = 0;
+
     // Get the converted sample from SOC0
-    uint32_t result = AdcResult.ADCRESULT0;
+    buffer[index++] = AdcResult.ADCRESULT0;
 
-    // Place the converted 12-bit sample in the buffer. Put the most
-    // significant bit of the sample in bit 31 of the result. We do this
-    // because the FFT library uses a Q30 fixed point number representation,
-    // which places the decimal point between bits 31 and 30. Shifting over the
-    // sample allows us to use the full range of fixed point values possible.
-    Sample_Buffer.data[Sample_Buffer.index++] = result << 15;
+    if (index == LENGTH(buffer)) {
+        index = 0;
 
-    // The complex FFT requires that the imaginary component come right after
-    // the real component. Since this is a real signal, the imaginary component
-    // is 0.
-    Sample_Buffer.data[Sample_Buffer.index++] = 0;
+        // Average all 40 samples together
+        uint32_t result = 0;
+        uint16_t i;
+        for (i = 0; i < LENGTH(buffer); i++) {
+            result += buffer[i]; // unlikely to overflow, since these are 12 bit ADC samples, going into a 32 bit wide integer
+        }
+        result /= LENGTH(buffer);
 
-    // If done, turn off CPU timer 1. CPU timer 1 triggers the start of an ADC
-    // sample, so turning it off stops ADC sampling.
-    if (Sample_Buffer.index == Sample_Buffer.length) {
-        CpuTimer1Regs.TCR.bit.TSS = 1;
+        // Place the averaged 12-bit samples in the buffer. Put the most
+        // significant bit of the sample in bit 16 of the result. We do this
+        // because the FFT library uses a Q30 fixed point number representation,
+        // which places the decimal point between bits 31 and 30. Shifting over the
+        // sample allows us to take advantage of more bits.
+        Sample_Buffer.data[Sample_Buffer.index++] = result << 15;
+
+        // If done, turn off CPU timer 1. CPU timer 1 triggers the start of an ADC
+        // sample, so turning it off stops ADC sampling.
+        if (Sample_Buffer.index == Sample_Buffer.length) {
+            CpuTimer1Regs.TCR.bit.TSS = 1;
+        }
     }
 
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;    // clear interrupt
