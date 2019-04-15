@@ -130,7 +130,7 @@ InitSpiaGpio()
     // Comment out other unwanted lines.
     //
     GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;   // Enable pull-up on GPIO16(SPISIMOA)
-    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;   // Enable pull-up on GPIO17(SPISOMIA)     <----possibly comment
+//    GpioCtrlRegs.GPAPUD.bit.GPIO17 = 0;   // Enable pull-up on GPIO17(SPISOMIA)     <----possibly comment
     GpioCtrlRegs.GPAPUD.bit.GPIO18 = 0;   // Enable pull-up on GPIO18(SPICLKA)
     GpioCtrlRegs.GPAPUD.bit.GPIO19 = 0;   // Enable pull-up on GPIO19(SPISTEA)
 
@@ -139,10 +139,10 @@ InitSpiaGpio()
     // This will select asynch (no qualification) for the selected pins.
     // Comment out other unwanted lines.
     //
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3; // Asynch input GPIO16 (SPISIMOA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3; // Asynch input GPIO17 (SPISOMIA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3; // Asynch input GPIO18 (SPICLKA)
-    GpioCtrlRegs.GPAQSEL2.bit.GPIO19 = 3; // Asynch input GPIO19 (SPISTEA)
+ //   GpioCtrlRegs.GPAQSEL2.bit.GPIO16 = 3; // Asynch input GPIO16 (SPISIMOA)
+ //   GpioCtrlRegs.GPAQSEL2.bit.GPIO17 = 3; // Asynch input GPIO17 (SPISOMIA)
+ //   GpioCtrlRegs.GPAQSEL2.bit.GPIO18 = 3; // Asynch input GPIO18 (SPICLKA)
+ //   GpioCtrlRegs.GPAQSEL2.bit.GPIO19 = 3; // Asynch input GPIO19 (SPISTEA)
 
     //
     // Configure SPI-A pins using GPIO regs
@@ -150,7 +150,7 @@ InitSpiaGpio()
     // pins. Comment out other unwanted lines.
     //
     GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 1;    // Configure GPIO16 as SPISIMOA
-    GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 1;    // Configure GPIO17 as SPISOMIA   <----possibly comment
+ //   GpioCtrlRegs.GPAMUX2.bit.GPIO17 = 1;    // Configure GPIO17 as SPISOMIA   <----possibly comment
     GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1;    // Configure GPIO18 as SPICLKA
     GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 1;    // Configure GPIO19 as SPISTEA
 
@@ -164,14 +164,27 @@ InitSpiaGpio()
 void
 InitSpiFifos()
 {
-    SpiaRegs.SPIFFTX.all |=  (uint16_t)SPI_SPIFFTX_CHAN_RESET_BITS;
-    SpiaRegs.SPIFFTX.all |=  (uint16_t)SPI_SPIFFTX_FIFO_ENA_BITS;
-    SpiaRegs.SPIFFTX.all &=  (uint16_t)~(SPI_SPIFFTX_FIFO_RESET_BITS);
-    SpiaRegs.SPIFFTX.all |=  (uint16_t)SPI_SPIFFTX_INTCLR_BITS;
-    SpiaRegs.SPIFFRX.all &=  (uint16_t)~(SPI_SPIFFRX_FIFO_RESET_BITS);
-    SpiaRegs.SPIFFRX.all |=  (uint16_t)SPI_SPIFFRX_INTCLR_BITS;
-    SpiaRegs.SPIFFRX.all &=  (uint16_t)~(SPI_SPIFFRX_IL_BITS);
-    SpiaRegs.SPIFFRX.all |=  (uint16_t)(1 << 0);  //one word at a time
+    uint16_t TX_BITS = 0x0000;
+    uint16_t RX_BITS = 0x0000;
+    SpiaRegs.SPIFFTX.all = TX_BITS;
+    //TX_BITS |= SPI_SPIFFTX_CHAN_RESET_BITS;
+    //TX_BITS |= SPI_SPIFFTX_FIFO_ENA_BITS;
+    //TX_BITS &=  ~(SPI_SPIFFTX_FIFO_RESET_BITS);
+    //TX_BITS |=  SPI_SPIFFTX_INTCLR_BITS;
+    TX_BITS = 0xA000;  //maybe make 0xA040
+    SpiaRegs.SPIFFTX.all = TX_BITS;
+   // SpiaRegs.SPIFFTX.all |=  (uint16_t) SPI_SPIFFTX_CHAN_RESET_BITS;
+  //  SpiaRegs.SPIFFTX.all |=  (uint16_t) SPI_SPIFFTX_FIFO_ENA_BITS;
+   // SpiaRegs.SPIFFTX.all &=  (uint16_t) ~(SPI_SPIFFTX_FIFO_RESET_BITS);
+  //  SpiaRegs.SPIFFTX.all |=  (uint16_t) SPI_SPIFFTX_INTCLR_BITS;
+    //SpiaRegs.SPIFFRX.all &=  (uint16_t) ~(SPI_SPIFFRX_FIFO_RESET_BITS);
+   // SpiaRegs.SPIFFRX.all |=  (uint16_t) SPI_SPIFFRX_INTCLR_BITS;
+    //SpiaRegs.SPIFFRX.all &=  (uint16_t) ~(SPI_SPIFFRX_IL_BITS);
+   // SpiaRegs.SPIFFRX.all |=  (uint16_t) (1 << 0);  //one word at a time
+    RX_BITS = 0x405F;
+    SpiaRegs.SPIFFRX.all = RX_BITS;
+
+
 }
 
 //
@@ -179,7 +192,20 @@ InitSpiFifos()
 //
 void SPI_write_16(const uint16_t data)
 {
-    SpiaRegs.SPITXBUF= (uint16_t)  data;
+    SpiaRegs.SPITXBUF = data;
+}
+
+//
+//Data to DAC is two dont-cares, followed by two bits for mode, followed by 8
+// bits of data, and finally 4 more dont cares.
+// Given 8 bits of data, writes data to SPI in DAC-friendly format.
+// Author - Michael
+//
+void DAC_write(const uint16_t data)
+{
+    uint16_t DACdata = 0x0000;
+    DACdata = data << 4;
+    SPI_write_16(DACdata);
 }
 
 //

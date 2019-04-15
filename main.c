@@ -10,13 +10,17 @@
 
 
 void main(void)
-{
+ {
     // Do all peripheral and CPU initialization. This function must be called
     // before other code is run.
     sys_init();
 
-    // michael doing a SPI test
-    //SPI_write_16(0x1234);
+    //michael doing a SPI test
+    uint16_t spiVal;
+    spiVal = 0x1234;
+    SPI_write_16(spiVal);
+    spiVal = 0x4321;
+    SPI_write_16(spiVal);
 
     // Begin application code
     while (1) {

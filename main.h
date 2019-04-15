@@ -27,6 +27,7 @@ int adc_done_sampling(void);
 // SPI functions
 void InitSpiFifos(void);
 void SPI_write_16(const uint16_t data);
+void DAC_write(const uint16_t data);
 
 // DSP utilities
 #define FFT_SIZE 64
