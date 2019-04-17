@@ -52,6 +52,14 @@ void LCD_init2(void);
 void LCD_display(uint16_t display_number);
 extern volatile uint16_t button_pushed;
 extern volatile uint16_t curr_display;
+
+// LED cube interface
+#define SET_LED(row, column, layer, color, value)\
+    framebuffer[led_index_table[(row)*3 + (column)*5 + (layer)*25]] = (value)
+enum Color {R=0, G=1, B=2};
+extern uint16_t framebuffer[5*5*5*3];
+extern const uint16_t led_index_table[5*5*5*3];
+
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
 
@@ -64,6 +72,6 @@ __interrupt void cpu_timer2_isr(void);
 __interrupt void adc_int1_isr(void);
 __interrupt void gpio_xint1_isr(void);
 __interrupt void spi_isr(void);
-
+__interrupt void i2c_isr(void);
 
 #endif

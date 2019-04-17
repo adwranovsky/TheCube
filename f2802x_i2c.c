@@ -10,32 +10,32 @@
 // $Copyright:
 // Copyright (C) 2009-2018 Texas Instruments Incorporated - http://www.ti.com/
 //
-// Redistribution and use in source and binary forms, with or without 
-// modification, are permitted provided that the following conditions 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
 // are met:
-// 
-//   Redistributions of source code must retain the above copyright 
+//
+//   Redistributions of source code must retain the above copyright
 //   notice, this list of conditions and the following disclaimer.
-// 
+//
 //   Redistributions in binary form must reproduce the above copyright
-//   notice, this list of conditions and the following disclaimer in the 
-//   documentation and/or other materials provided with the   
+//   notice, this list of conditions and the following disclaimer in the
+//   documentation and/or other materials provided with the
 //   distribution.
-// 
+//
 //   Neither the name of Texas Instruments Incorporated nor the names of
 //   its contributors may be used to endorse or promote products derived
 //   from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT 
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 // LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT 
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, 
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT 
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 // LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
 // DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // $
 //###########################################################################
@@ -56,9 +56,28 @@ InitI2C(void)
     //
     // Initialize I2C-A
     //
-    // init I2C module clock, must be between 7-12 MHz (I2CPSC)
-    // init I2C master clock speed, 400 KHz (I2CCLKH, I2CCLKL)
-    // init 
+
+    // Force the module into reset using IRS bit in I2CMDR. IRS must remain zero while reconfiguring.
+    I2caRegs.I2CMDR.bit.IRS = 0;
+
+    // Set the I2C SCL frequency to 400 KHz
+    I2caRegs.I2CPSC.bit.IPSC = 4;  // init I2C module clock, must be between 7-12 MHz (I2CPSC)
+    I2caRegs.I2CCLKL         = 10; // init I2C SCL low time
+    I2caRegs.I2CCLKH         = 10; // init I2C SCL high time
+
+    // Configure the TX FIFO
+    I2caRegs.I2CFFTX.bit.I2CFFEN = 1; // Enable the TX FIFO
+    I2caRegs.I2CFFTX.bit.TXFFIL  = 0; // Interrupt when the FIFO has 0 bytes left
+    I2caRegs.I2CFFTX.bit.TXFFRST = 1; // Pull the FIFO module out of reset
+
+    // Enable interrupts
+    I2caRegs.I2CIER.bit.ARDY      = 1; // Interrupt on Register-access-ready
+    I2caRegs.I2CIER.bit.NACK      = 1; // Interrupt on NACK
+    I2caRegs.I2CIER.bit.SCD       = 1; // Interrupt on stop condition
+    I2caRegs.I2CFFTX.bit.TXFFIENA = 1; // Interrupt on TX FIFO
+
+    // Take the module out of reset
+    I2caRegs.I2CMDR.bit.IRS = 1;
 }
 
 //
@@ -103,7 +122,7 @@ InitI2CGpio()
 
     //
     // Configure I2C pins using GPIO regs
-    // This specifies which of the possible GPIO pins will be I2C 
+    // This specifies which of the possible GPIO pins will be I2C
     // functional pins. Comment out other unwanted lines.
     //
     GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 2;   // Configure GPIO28 for SDAA
@@ -113,6 +132,39 @@ InitI2CGpio()
     //GpioCtrlRegs.GPBMUX1.bit.GPIO33 = 1;   // Configure GPIO33 for SCLA
 
     EDIS;
+}
+
+/*
+ * LED Driver Workflow:
+ *
+ *
+ */
+
+void start_cube(void) {
+}
+
+__interrupt void i2c_isr(void) {
+    uint16_t i2c_int_status = I2caRegs.I2CSTR.all;
+
+    switch (I2caRegs.I2CISRC.bit.INTCODE) {
+        case I2C_NACK_ISRC: {
+            break;
+        }
+        case I2C_ARDY_ISRC: {
+            break;
+        }
+        case I2C_TX_ISRC: {
+            break;
+        }
+        case I2C_SCD_ISRC: {
+            break;
+        }
+        default:
+            while (1); // unhandled interrupt type, spin loop for debug
+    }
+
+    // Acknowledge the PIE interrupt so we can receive more on this group
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP8;
 }
 
 //
