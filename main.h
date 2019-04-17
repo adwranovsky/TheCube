@@ -38,6 +38,13 @@ void print_time_domain(int32_t *sample_buffer);
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
 uint32_t detect_beat(const int32_t *frequencies);
 
+// LED cube interface
+#define SET_LED(row, column, layer, color, value)\
+    framebuffer[led_index_table[(row)*3 + (column)*5 + (layer)*25]] = (value)
+enum Color {R=0, G=1, B=2};
+extern uint16_t framebuffer[5*5*5*3];
+extern const uint16_t led_index_table[5*5*5*3];
+
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
 
@@ -47,5 +54,6 @@ __interrupt void sci_tx_isr(void);
 __interrupt void cpu_timer0_isr(void);
 __interrupt void cpu_timer1_isr(void);
 __interrupt void adc_int1_isr(void);
+__interrupt void i2c_isr(void);
 
 #endif
