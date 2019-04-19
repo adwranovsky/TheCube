@@ -17,6 +17,7 @@ int32_t fft_comp_buffer[FFT_SIZE+2];
 #pragma DATA_SECTION(sample_buffer, "FFTsamples")
 volatile int32_t sample_buffer[FFT_SIZE];
 
+
 // Make sure to have FFT defaults match FFT_SIZE
 RFFT32 rfft_control = RFFT32_64P_DEFAULTS;
 

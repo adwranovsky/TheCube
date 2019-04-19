@@ -223,6 +223,22 @@ __interrupt void cpu_timer1_isr(void) {
     CpuTimer1.InterruptCount++;
 }
 
+/*
+ * cpu_timer2_isr
+ *
+ * CPU timer 2 is SPI clock for LCD screen. Nothing needs to happen within the ISR itself.
+ * Note that this is NOT a PIE interrupt, so PIEACK doesn't need to be written to.
+ */
+__interrupt void cpu_timer2_isr(void) {
+     CpuTimer2.InterruptCount++;
+
+    // GpioDataRegs.GPBTOGGLE.bit.GPIO33 = 1;
+    // GpioDataRegs.GPBTOGGLE.bit.GPIO32 = 1;
+
+     LCDMainAction();
+     // CpuTimer2.RegsAddr->TCR.bit.TIF = 1; //clear interrupt?
+
+}
 //
 // End of file
 //

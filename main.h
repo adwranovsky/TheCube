@@ -28,7 +28,8 @@ int adc_done_sampling(void);
 void InitSpiFifos(void);
 void SPI_write_16(const uint16_t data);
 void DAC_write(const uint16_t data);
-
+void dac_start_sampling(volatile int32_t *buffer, size_t length, volatile int16_t *buffer2); // MN function to initialize DAC samples
+void DAC_send(volatile int16_t *sample_buffer_2);
 // DSP utilities
 #define FFT_SIZE 64
 extern int32_t fft_comp_buffer[FFT_SIZE+2];
@@ -39,6 +40,14 @@ void print_time_domain(int32_t *sample_buffer);
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
 uint32_t detect_beat(const int32_t *frequencies);
 
+// LCD functions and variables
+void LCDTimerStart(void);
+void LCDTimerStop(void);
+void LCDMainAction(void);
+void LCDWait(void);
+void LCD_init2(void);
+void LCD_display1(void);
+
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
 
@@ -47,6 +56,7 @@ __interrupt void sci_rx_isr(void);
 __interrupt void sci_tx_isr(void);
 __interrupt void cpu_timer0_isr(void);
 __interrupt void cpu_timer1_isr(void);
+__interrupt void cpu_timer2_isr(void);
 __interrupt void adc_int1_isr(void);
 
 #endif

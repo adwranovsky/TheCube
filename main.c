@@ -14,18 +14,13 @@ void main(void)
     // Do all peripheral and CPU initialization. This function must be called
     // before other code is run.
     sys_init();
-
-    //michael doing a SPI test
-    uint16_t spiVal;
-    spiVal = 0x1234;
-    SPI_write_16(spiVal);
-    spiVal = 0x4321;
-    SPI_write_16(spiVal);
-
+    LCD_init2();
+    LCD_display1();
     // Begin application code
     while (1) {
         // Pick the demo to do based on the input character
         char c = sci_get_char();
+        volatile  int16_t sample_buffer_2[40];
         switch (c) {
 
         // FFT demo. Used by the f28027_fft_display.py script.
@@ -83,6 +78,26 @@ void main(void)
                     GpioDataRegs.GPASET.bit.GPIO0 = 1;
                 }
             }
+        //DAC test
+        case 'd':
+
+            dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
+
+            while(1) {
+                while (!adc_done_sampling());
+                bit_reversal(sample_buffer, fft_comp_buffer);
+                dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
+                rfft(fft_comp_buffer);
+                DAC_send(sample_buffer_2);
+                sci_send_char('$');
+            }
+        //LCD test
+       // case 'l':
+        //    LCD_data = 0x00AF;
+       //    LCDTimerStart;
+        //    LCD_data = 0x00AD;
+       //     LCDTimerStart;
+
         }
     }
 }

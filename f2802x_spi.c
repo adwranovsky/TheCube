@@ -209,6 +209,20 @@ void DAC_write(const uint16_t data)
 }
 
 //
+//prototype function to send 40 ADC audio samples to DAC sequentially
+//will need to add interrupts in future
+//Author - Michael
+//
+void DAC_send(volatile int16_t *sample_buffer_2)
+{
+    uint16_t data;
+    uint16_t i;
+    for (i = 0; i < 40 ; i++){
+        data = sample_buffer_2[i] ; //data in bottom 8 bits of this result
+        DAC_write(data);
+    }
+}
+//
 // End of file
 //
 

@@ -58,6 +58,12 @@ static struct {
     volatile int32_t *data;
 } Sample_Buffer;
 
+static struct {
+    volatile size_t index;
+    size_t length;
+    volatile int16_t *data;
+} Sample_Buffer_2; // buffer for DAC MN
+
 //
 // InitAdc - This function initializes ADC to a known state.
 // NOTE: ADC INIT IS DIFFERENT ON 2802x DEVICES COMPARED TO OTHER 28X DEVICES
@@ -505,6 +511,7 @@ __interrupt void adc_int1_isr(void) {
         uint32_t result = 0;
         uint16_t i;
         for (i = 0; i < LENGTH(buffer); i++) {
+            Sample_Buffer_2.data[i] = (uint8_t) ((buffer[i] && 0xFF00) >> 8); //populate separate buffer to feed DAC from SPI (most sig 8 bits of sample) MN
             result += buffer[i]; // unlikely to overflow, since these are 12 bit ADC samples, going into a 32 bit wide integer
         }
         result /= LENGTH(buffer);
@@ -526,6 +533,34 @@ __interrupt void adc_int1_isr(void) {
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;    // clear interrupt
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;  // acknowledge this interrupt with the PIE
 }
+
+/*
+ * COPY OF adc_start_sampling method above so that Michael doesnt break things
+ * Audio sampling control flow:
+ * 1. Set up sample buffer
+ * 2. Enable timer interrupt
+ * 3. Timer interrupt triggers an SoC
+ * 4. When SoC is complete, and ADC interrupt is triggered
+ * 5. ADC interrupt places sample in buffer
+ * 6. Once the buffer is full, ADC interrupt turns off timer and signals to the main application
+ */
+void dac_start_sampling(volatile int32_t *buffer, size_t length, volatile int16_t *buffer2) {
+    // Since the ADC interrupt stuffs a 0 valued imaginary component after each
+    // real-valued sample, the length must be even
+    if (length % 2)
+        return;
+
+    // Set the ISR state info
+    Sample_Buffer.data = buffer;
+    Sample_Buffer.length = length;
+    Sample_Buffer.index = 0;
+    Sample_Buffer_2.data = buffer2;
+    Sample_Buffer_2.length = length;
+    Sample_Buffer_2.index = 0;
+    // Start the CPU timer, which triggers the ADC interrupt at regular intervals
+    CpuTimer1Regs.TCR.bit.TSS = 0;
+}
+
 
 //
 // End of file
