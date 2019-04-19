@@ -66,17 +66,26 @@ InitI2C(void)
     I2caRegs.I2CCLKH         = 10; // init I2C SCL high time
 
     // Configure the TX FIFO
-    I2caRegs.I2CFFTX.bit.I2CFFEN = 1; // Enable the TX FIFO
+    I2caRegs.I2CFFTX.bit.I2CFFEN = 1; // Enable the I2C FIFOs
     I2caRegs.I2CFFTX.bit.TXFFIL  = 0; // Interrupt when the FIFO has 0 bytes left
-    I2caRegs.I2CFFTX.bit.TXFFRST = 1; // Pull the FIFO module out of reset
+    I2caRegs.I2CFFTX.bit.TXFFRST = 1; // Pull the TX FIFO out of reset
+
+    // Configure the RX FIFO
+    I2caRegs.I2CFFRX.bit.RXFFIL  = 1; // Interrupt when the FIFO has received 1 byte
+    I2caRegs.I2CFFRX.bit.RXFFRST = 1; // Pull the RX FIFO out of reset
 
     // Enable interrupts
     I2caRegs.I2CIER.bit.ARDY      = 1; // Interrupt on Register-access-ready
     I2caRegs.I2CIER.bit.NACK      = 1; // Interrupt on NACK
     I2caRegs.I2CIER.bit.SCD       = 1; // Interrupt on stop condition
     I2caRegs.I2CFFTX.bit.TXFFIENA = 1; // Interrupt on TX FIFO
+    I2caRegs.I2CFFRX.bit.RXFFIENA = 1; // Interrupt on RX FIFO
 
-    // Take the module out of reset
+    // Make sure FIFO interrupts are cleared before exiting reset
+    I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+    I2caRegs.I2CFFRX.bit.RXFFINTCLR = 1;
+
+    // Take the I2C module out of reset
     I2caRegs.I2CMDR.bit.IRS = 1;
 }
 
@@ -140,7 +149,39 @@ InitI2CGpio()
  *
  */
 
+// I2C defines
+#define REPEAT_MODE_START 0x26b0
+#define REPEAT_MODE_STOP  0x0eb0
+#define FIFO_DEPTH        4
+
+// LED driver register addresses
+#define SHUTDOWN_REG      0x00
+#define DUTY_CYCLE_0_REG  0x05
+#define UPDATE_REG        0x25
+#define LED_CTRL_0_REG    0x2A
+#define GLOBAL_CTRL_REG   0x4A
+#define OUTPUT_FREQ_REG   0x4B
+#define RESET_REG         0x4F
+
+static const uint16_t driver_addrs = {0x3c|0, 0x3c|3, 0x3c|1};
+static struct {
+    uint16_t current_led = 0;
+} Cube_State;
+
 void start_cube(void) {
+    // Set the slave address to the first LED driver
+    I2caRegs.I2CSAR.bit.SAR = driver_addrs[0];
+
+    // Load the driver register address into the FIFO
+    I2caRegs.I2CDXR.all = DUTY_CYCLE_0_REG;
+
+    // Load the first few LED values into the FIFO
+    while (I2caRegs.I2CFFTX.bit.I2CFFST != FIFO_DEPTH) {
+        I2caRegs.I2CDXR.all = framebuffer[Cube_State.current_led++];
+    }
+
+    // Start a repeated transaction to get the snowball rolling
+    I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 }
 
 __interrupt void i2c_isr(void) {
@@ -160,7 +201,7 @@ __interrupt void i2c_isr(void) {
             break;
         }
         default:
-            while (1); // unhandled interrupt type, spin loop for debug
+            while (1); // Unhandled interrupt type, spin loop for debug. The I2C interrupts were probably configured wrong
     }
 
     // Acknowledge the PIE interrupt so we can receive more on this group
