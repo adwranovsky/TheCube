@@ -55,7 +55,7 @@ extern volatile uint16_t curr_display;
 
 // LED cube interface
 #define SET_LED(row, column, layer, color, value)\
-    framebuffer[led_index_table[(row)*3 + (column)*5 + (layer)*25]] = (value)
+    framebuffer[led_index_table[(row)*3 + (column)*3*5 + (layer)*3*5*5]] = (value)
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
