@@ -16,6 +16,13 @@ void main(void)
     sys_init();
     LCD_init2();
     LCD_display(1);
+
+    // michael doing a SPI test
+    //SPI_write_16(0x1234);
+
+    // alex doing an I2C test
+    start_cube();
+
     // Begin application code
     while (1) {
         // Pick the demo to do based on the input character

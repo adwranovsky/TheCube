@@ -78,7 +78,8 @@ void sys_init(void) {
     PieVectTable.ADCINT1   = &adc_int1_isr;
     PieVectTable.XINT1     = &gpio_xint1_isr;
     PieVectTable.SPIRXINTA = &spi_isr;
-    PieVectTable.I2CINT1A  = &i2c_isr;
+    PieVectTable.I2CINT1A  = &i2c_isr1;
+    PieVectTable.I2CINT1A  = &i2c_isr2;
     EDIS;      // This is needed to disable write to EALLOW protected registers
 
     //
@@ -90,6 +91,9 @@ void sys_init(void) {
     InitSpi();
     InitSpiGpio();
     InitLCD();
+    InitSpiFifos();
+    InitI2C();
+
     //
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
     // 60MHz CPU Freq, 500 millisecond Period (in uSeconds)

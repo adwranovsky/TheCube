@@ -1,8 +1,10 @@
+#include <stdint.h>
+
 /*
  * The framebuffer holds the brightness data for all of the LEDs. Only the
- * lowest 8 bits are used. The values are arranged in a way to make I2C
- * transations faster, so use the provided macros to set a particular LED from
- * user code.
+ * lowest 8 bits of each word are used. The values are arranged in a way to
+ * make I2C transations faster, so use the provided macros to set a particular
+ * LED from user code.
  */
 uint16_t framebuffer[5*5*5*3];
 

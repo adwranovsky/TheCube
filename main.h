@@ -59,6 +59,7 @@ extern volatile uint16_t curr_display;
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
+void start_cube(void);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
@@ -72,6 +73,7 @@ __interrupt void cpu_timer2_isr(void);
 __interrupt void adc_int1_isr(void);
 __interrupt void gpio_xint1_isr(void);
 __interrupt void spi_isr(void);
-__interrupt void i2c_isr(void);
+__interrupt void i2c_isr1(void);
+__interrupt void i2c_isr2(void);
 
 #endif
