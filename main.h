@@ -44,6 +44,7 @@ uint32_t detect_beat(const int32_t *frequencies);
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
+void start_cube(void);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
@@ -54,6 +55,7 @@ __interrupt void sci_tx_isr(void);
 __interrupt void cpu_timer0_isr(void);
 __interrupt void cpu_timer1_isr(void);
 __interrupt void adc_int1_isr(void);
-__interrupt void i2c_isr(void);
+__interrupt void i2c_isr1(void);
+__interrupt void i2c_isr2(void);
 
 #endif
