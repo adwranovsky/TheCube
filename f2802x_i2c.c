@@ -167,9 +167,9 @@ InitI2CGpio()
 
 // LED driver register addresses
 #define SHUTDOWN_REG      0x00
-#define DUTY_CYCLE_0_REG  0x05
+#define DUTY_CYCLE_1_REG  0x05
 #define UPDATE_REG        0x25
-#define LED_CTRL_0_REG    0x2A
+#define LED_CTRL_1_REG    0x2A
 #define GLOBAL_CTRL_REG   0x4A
 #define OUTPUT_FREQ_REG   0x4B
 #define RESET_REG         0x4F
@@ -212,21 +212,33 @@ static void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val) 
 }
 
 void led_driver_test(void) {
-    // enable driver 0 channel 0
-    i2c_write(device_addrs[0], LED_CTRL_0_REG, 1);
+    int i, j;
 
-    // turn on driver 0
-    i2c_write(device_addrs[0], SHUTDOWN_REG, 1);
+    // for drivers 0 and 2...
+    for (i = 0; i < 3; i+=2) {
+        // turn on driver 0
+        i2c_write(device_addrs[i], SHUTDOWN_REG, 1);
+        // enable channels 1-25
+        for (j = 0; j < 25; j++) {
+            i2c_write(device_addrs[i], LED_CTRL_1_REG + j, 1);
+        }
+        // write a value to channels 1-25
+        for (j = 0; j < 25; j++) {
+            i2c_write(device_addrs[i], DUTY_CYCLE_1_REG + j, 128);
+        }
+        // update the driver
+        i2c_write(device_addrs[i], UPDATE_REG, 0);
+    }
 
     // fade the LED in and out
     uint16_t value = 1;
     uint16_t direction = 1;
     while (1) {
-        // write a value to driver 0 channel 0
-        i2c_write(device_addrs[0], DUTY_CYCLE_0_REG, value);
+        // write a value to driver 2 channel 2
+        i2c_write(device_addrs[2], DUTY_CYCLE_1_REG + 1, value);
 
-        // commit channel 0 value to the output
-        i2c_write(device_addrs[0], UPDATE_REG, 0);
+        // commit channel 1 value to the output
+        i2c_write(device_addrs[2], UPDATE_REG, 0);
 
         // find the next value
         if (direction) {
@@ -244,6 +256,11 @@ void led_driver_test(void) {
                 value >>= 1;
             }
         }
+
+        // wait for a bit
+        ConfigCpuTimer(&CpuTimer0, 60, 50000);
+        CpuTimer0.InterruptCount = 0;
+        while (CpuTimer0.InterruptCount < 1);
     }
 }
 
