@@ -214,17 +214,17 @@ static void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val) 
 void led_driver_test(void) {
     int i, j;
 
-    // for drivers 0 and 2...
-    for (i = 0; i < 3; i+=2) {
-        // turn on driver 0
+    // for all the drivers
+    for (i = 0; i < 3; i++) {
+        // turn on the driver
         i2c_write(device_addrs[i], SHUTDOWN_REG, 1);
-        // enable channels 1-25
-        for (j = 0; j < 25; j++) {
+        // enable the appropriate channels
+        for (j = 0; j < NUM_CHANNELS; j++) {
             i2c_write(device_addrs[i], LED_CTRL_1_REG + j, 1);
         }
-        // write a value to channels 1-25
-        for (j = 0; j < 25; j++) {
-            i2c_write(device_addrs[i], DUTY_CYCLE_1_REG + j, 128);
+        // turn on each channel just a wee bit so that shorts to ground are obvious
+        for (j = 0; j < NUM_CHANNELS; j++) {
+            i2c_write(device_addrs[i], DUTY_CYCLE_1_REG + j, 2);
         }
         // update the driver
         i2c_write(device_addrs[i], UPDATE_REG, 0);
@@ -237,7 +237,7 @@ void led_driver_test(void) {
         // write a value to driver 2 channel 2
         i2c_write(device_addrs[2], DUTY_CYCLE_1_REG + 1, value);
 
-        // commit channel 1 value to the output
+        // commit the channel 2 value to the output
         i2c_write(device_addrs[2], UPDATE_REG, 0);
 
         // find the next value
@@ -258,8 +258,9 @@ void led_driver_test(void) {
         }
 
         // wait for a bit
-        ConfigCpuTimer(&CpuTimer0, 60, 50000);
+        ConfigCpuTimer(&CpuTimer0, 60, 25000);
         CpuTimer0.InterruptCount = 0;
+        CpuTimer0Regs.TCR.all = 0x4001;
         while (CpuTimer0.InterruptCount < 1);
     }
 }
