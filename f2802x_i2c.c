@@ -68,21 +68,15 @@ InitI2C(void)
     I2caRegs.I2CCLKL         = 20; // init I2C SCL low time
     I2caRegs.I2CCLKH         = 20; // init I2C SCL high time
 
-    // Configure the TX FIFO
-    I2caRegs.I2CFFTX.bit.I2CFFEN = 1; // Enable the I2C FIFOs
-    I2caRegs.I2CFFTX.bit.TXFFIL  = 0; // Interrupt when the FIFO has 0 bytes left
-    I2caRegs.I2CFFTX.bit.TXFFRST = 1; // Pull the TX FIFO out of reset
-
-    // Configure the RX FIFO
-    I2caRegs.I2CFFRX.bit.RXFFIL  = 1; // Interrupt when the FIFO has received 1 byte
-    I2caRegs.I2CFFRX.bit.RXFFRST = 1; // Pull the RX FIFO out of reset
-
-    // Make sure FIFO interrupts are cleared before exiting reset
-    I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
-    I2caRegs.I2CFFRX.bit.RXFFINTCLR = 1;
 
     // Take the I2C module out of reset
     I2caRegs.I2CMDR.bit.IRS = 1;
+
+    // Configure the TX FIFO
+    I2caRegs.I2CFFTX.all = 0x6000;   // Enable FIFO mode and TXFIFO, and interrupt when the FIFO is empty
+
+    // Configure the RX FIFO
+    I2caRegs.I2CFFRX.all = 0x2040;   // Enable RXFIFO, clear RXFFINT,
 
     EDIS;
 }
@@ -167,8 +161,8 @@ InitI2CGpio()
  */
 
 // I2C defines
-#define REPEAT_MODE_START 0x26b0
-#define REPEAT_MODE_STOP  0x0eb0
+#define REPEAT_MODE_START 0x26a0
+#define REPEAT_MODE_STOP  0x0ea0
 #define FIFO_DEPTH        4
 
 // LED driver register addresses
@@ -196,15 +190,25 @@ static struct {
  */
 static void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val) {
     disable_i2c_interrupts();
-    I2caRegs.I2CSAR     = slave_addr;
-    I2caRegs.I2CDXR     = reg_addr;
-    I2caRegs.I2CDXR     = reg_val;
+    // Wait for a stop condition to be cleared before doing any operations
+    while (I2caRegs.I2CMDR.bit.STP);
+
+    // Set the slave address
+    I2caRegs.I2CSAR = slave_addr;
+
+    // Load the data into the FIFO
+    I2caRegs.I2CDXR = reg_addr;
+    I2caRegs.I2CDXR = reg_val;
+
+    // Signal to the I2C module that it should start the transaction
     I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+
+    // Wait for the FIFO to empty itself
     while (!I2caRegs.I2CFFTX.bit.TXFFINT);
     I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+
+    // Signal to the I2C module that it should stop the transaction
     I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
-    while (!I2caRegs.I2CSTR.bit.BB);
-    //enable_i2c_interrupts();
 }
 
 void led_driver_test(void) {
