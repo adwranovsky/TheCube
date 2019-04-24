@@ -18,7 +18,6 @@ void main(void)
     // michael doing a SPI test
     //SPI_write_16(0x1234);
 
-    // alex doing an I2C test
     start_cube();
 
     // Begin application code

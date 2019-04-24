@@ -5,4 +5,5 @@
 
 # ignore code composer output
 Debug
+ALEX_TEST/
 .launches/

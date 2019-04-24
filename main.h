@@ -46,6 +46,7 @@ extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
 extern volatile uint16_t vsync;
 void start_cube(void);
+void led_driver_test(void);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);

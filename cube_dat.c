@@ -1,6 +1,12 @@
 #include <stdint.h>
 
 /*
+ * This value gets set to 1 every time the full framebuffer is written out.
+ * This is so that the application can sync up with the driver's refresh rate.
+ */
+volatile uint16_t vsync = 0;
+
+/*
  * The framebuffer holds the brightness data for all of the LEDs. Only the
  * lowest 8 bits of each word are used. The values are arranged in a way to
  * make I2C transations faster, so use the provided macros to set a particular
