@@ -4,14 +4,26 @@
  */
 
 #include "main.h"
+#include "F2802x_Device.h"
+#include "f2802x_examples.h"
 
 void framebuffer_test(void);
+extern void alex_test(void);
 
 void main(void) {
     sys_init();
+
+    // wait for a second
+    //ConfigCpuTimer(&CpuTimer0, 60, 500000);
+    //CpuTimer0.InterruptCount = 0;
+    //CpuTimer0Regs.TCR.all = 0x4001;
+    //while (CpuTimer0.InterruptCount < 2);
+
     start_cube();
+    //alex_test();
 
     framebuffer_test();
+    //led_driver_test();
 
     while (1) {
     }
@@ -19,6 +31,7 @@ void main(void) {
 
 void framebuffer_test(void) {
     int i;
+
     for (i = 1; i <= 75; i++) {
         framebuffer[i] = i;
     }

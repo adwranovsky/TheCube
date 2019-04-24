@@ -76,7 +76,7 @@ void sys_init(void) {
     PieVectTable.SCITXINTA = &sci_tx_isr;
     PieVectTable.ADCINT1   = &adc_int1_isr;
     PieVectTable.I2CINT1A  = &i2c_isr1;
-    PieVectTable.I2CINT1A  = &i2c_isr2;
+    PieVectTable.I2CINT2A  = &i2c_isr2;
     EDIS;      // This is needed to disable write to EALLOW protected registers
 
     //
@@ -133,6 +133,7 @@ void sys_init(void) {
     // Enable CPU interrupts
     //
     IER |= M_INT1;  // CPU timer 0 and ADC interrupt 1 come in on INT1
+    IER |= M_INT8;  // I2C interrupts come in on INT8
     IER |= M_INT9;  // SCI interrupts come in on INT9
     IER |= M_INT13; // CPU timer 1 comes in on INT13
 
@@ -143,6 +144,7 @@ void sys_init(void) {
     PieCtrlRegs.PIEIER1.bit.INTx1  = 1; // Enable group 1 interrupt 1 (ADCINT1)
     PieCtrlRegs.PIEIER1.bit.INTx7  = 1; // Enable group 1 interrupt 7
     PieCtrlRegs.PIEIER8.bit.INTx1  = 1; // Enable group 8 interrupt 1 (I2CINT1A)
+    PieCtrlRegs.PIEIER8.bit.INTx2  = 1; // Enable group 8 interrupt 2 (I2CINT2A)
     PieCtrlRegs.PIEIER9.bit.INTx1  = 1; // Enable group 9 interrupt 1 (SCARXINTA)
     PieCtrlRegs.PIEIER9.bit.INTx2  = 1; // Enable group 9 interrupt 2 (SCATXINTA)
 

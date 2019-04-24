@@ -70,11 +70,11 @@ void InitI2C(void) {
     // Take the I2C module out of reset
     I2caRegs.I2CMDR.bit.IRS = 1;
 
-    // Configure the TX FIFO
-    I2caRegs.I2CFFTX.all = 0x6000;   // Enable FIFO mode and TXFIFO, and interrupt when the FIFO is empty
+    // Enable FIFO mode and TXFIFO, and interrupt when the TX FIFO is empty
+    I2caRegs.I2CFFTX.all = 0x6000;
 
     // Configure the RX FIFO
-    I2caRegs.I2CFFRX.all = 0x2040;   // Enable RXFIFO, clear RXFFINT,
+    //I2caRegs.I2CFFRX.all = 0x2040; // Enable RXFIFO, clear RXFFINT,
 
     EDIS;
 }
@@ -87,15 +87,17 @@ static void disable_i2c_interrupts(void) {
     I2caRegs.I2CFFRX.bit.RXFFIENA = 0; // Interrupt on RX FIFO
 }
 static void enable_i2c_interrupts(void) {
+    EALLOW;
     // Make sure FIFO interrupts are cleared before reenabling them
     I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
     I2caRegs.I2CFFRX.bit.RXFFINTCLR = 1;
 
     //I2caRegs.I2CIER.bit.ARDY      = 1; // Interrupt on Register-access-ready
-    I2caRegs.I2CIER.bit.NACK      = 1; // Interrupt on NACK
-    I2caRegs.I2CIER.bit.SCD       = 1; // Interrupt on stop condition
+    //I2caRegs.I2CIER.bit.NACK      = 1; // Interrupt on NACK
+    //I2caRegs.I2CIER.bit.SCD       = 1; // Interrupt on stop condition
     I2caRegs.I2CFFTX.bit.TXFFIENA = 1; // Interrupt on TX FIFO
     //I2caRegs.I2CFFRX.bit.RXFFIENA = 1; // Interrupt on RX FIFO
+    EDIS;
 }
 
 //
@@ -162,8 +164,10 @@ void InitI2CGpio() {
  */
 
 // I2C defines
-#define REPEAT_MODE_START 0x26a0
-#define REPEAT_MODE_STOP  0x0ea0
+//#define REPEAT_MODE_START 0x26a0
+//#define REPEAT_MODE_STOP  0x0ea0
+#define REPEAT_MODE_START 0x66a0
+#define REPEAT_MODE_STOP  0x4ea0
 #define FIFO_DEPTH        4
 
 // LED driver register addresses
@@ -282,7 +286,7 @@ void start_cube(void) {
 
     // Initialize each LED driver using no-interrupt mode
     for (i = 0; i < LENGTH(device_addrs); i++) {
-        // Turn it on
+        // Turn on the driver
         i2c_write(device_addrs[i], SHUTDOWN_REG, 1);
 
         // Enable the appropriate channels
@@ -303,6 +307,8 @@ void start_cube(void) {
     // Wait for any old transactions to complete
     while (I2caRegs.I2CMDR.bit.STP);
 
+    enable_i2c_interrupts();
+
     // Set the next slave address
     I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
 
@@ -311,13 +317,27 @@ void start_cube(void) {
     I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
 
     // Load the first few data values into the FIFO
-    while (I2caRegs.I2CFFTX.bit.TXFFST != FIFO_DEPTH) {
+    while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
         I2caRegs.I2CDXR = *(I2c_State.next_data++);
     }
 
     // Start a repeated transaction to get the snowball rolling
-    enable_i2c_interrupts();
+    I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
     I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+}
+
+void alex_test(void) {
+    enable_i2c_interrupts();
+
+    while (I2caRegs.I2CMDR.bit.STP);
+    I2caRegs.I2CSAR = device_addrs[0];
+    I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
+    while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
+        I2caRegs.I2CDXR = 0xbb;
+    }
+    I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+    I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+    while(1);
 }
 
 /*
@@ -366,7 +386,7 @@ __interrupt void i2c_isr2(void) {
                 I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
 
                 // Load the first few data values into the FIFO
-                while (I2caRegs.I2CFFTX.bit.TXFFST != FIFO_DEPTH) {
+                while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
                     I2caRegs.I2CDXR = *(I2c_State.next_data++);
                 }
 
@@ -377,7 +397,7 @@ __interrupt void i2c_isr2(void) {
 
             case WRITE:
                 // Load the FIFO until it is full or we run out of data
-                while (I2caRegs.I2CFFTX.bit.TXFFST != FIFO_DEPTH) {
+                while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
                     // Put the next value into the FIFO
                     I2caRegs.I2CDXR = *(I2c_State.next_data++);
 
