@@ -24,7 +24,10 @@ RFFT32 rfft_control = RFFT32_64P_DEFAULTS;
 /*
  * Wrapper around the DSP library bit reversal function
  */
-void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer) {
+void bit_reversal(
+    volatile int32_t sample_buffer[FFT_SIZE],
+    int32_t fft_comp_buffer[FFT_SIZE+2]
+) {
     // Clean up computation buffer
     int32_t i;
     for (i=0; i<FFT_SIZE+2; i++) {
@@ -37,9 +40,9 @@ void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer) {
 
 /*
  * Computes the complex frequencies from the ADC samples. ONLY use a properly
- * aligned buffer for time_domain_buffer.
+ * aligned buffer.
  */
-void rfft(int32_t *fft_comp_buffer) {
+void rfft(int32_t fft_comp_buffer[FFT_SIZE+2]) {
     // Set the buffer, and calculate the FFT
     rfft_control.ipcbptr = fft_comp_buffer;
     rfft_control.magptr = fft_comp_buffer;
@@ -50,7 +53,7 @@ void rfft(int32_t *fft_comp_buffer) {
     rfft_control.mag(&rfft_control);
 }
 
-void print_time_domain(int32_t *sample_buffer) {
+void print_time_domain(int32_t sample_buffer[FFT_SIZE]) {
     sci_send_string("START TIME DOMAIN\n\r");
     size_t index;
     for (index = 0; index < FFT_SIZE; index++) {
@@ -62,7 +65,7 @@ void print_time_domain(int32_t *sample_buffer) {
     sci_send_string("END TIME DOMAIN\n\r");
 }
 
-void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate) {
+void print_freq_domain(int32_t fft_comp_buffer[FFT_SIZE+2], int32_t sample_rate) {
     sci_send_string("START FREQ DOMAIN\n\r");
     size_t index;
     for (index = 1; index < FFT_SIZE/2; index++) {
@@ -80,7 +83,7 @@ void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate) {
  * sound wave power. The return value is the difference between this running
  * average and the current power if it is positive, and 0 otherwise.
  */
-uint32_t detect_beat(const int32_t *frequencies) {
+uint32_t detect_beat(const int32_t frequencies[FFT_SIZE+2]) {
     static uint32_t avg_power = 0;
     uint32_t power = 0;
 
