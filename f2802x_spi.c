@@ -55,7 +55,7 @@
 //
 
 #define SPI_BRR        ((60E6 / 4) / 80E3) - 1   //DAC at 80kHz
-
+volatile uint16_t readyForMore = 0; // SPI TX FIFO is ready for new data
 
 //
 // InitSPI - This function initializes the SPI(s) to a known state.
@@ -64,7 +64,8 @@ void
 InitSpi(void)
 {
     // Initialize SPI-A
-
+    uint16_t TX_BITS = 0x0000;
+    uint16_t RX_BITS = 0x0000;
     // Set reset low before configuration changes
     // Clock polarity (0 == rising, 1 == falling)
     // 16-bit character
@@ -81,16 +82,25 @@ InitSpi(void)
     SpiaRegs.SPICTL.bit.MASTER_SLAVE = 1;
     SpiaRegs.SPICTL.bit.TALK = 1;
     SpiaRegs.SPICTL.bit.CLK_PHASE = 0;
-    SpiaRegs.SPICTL.bit.SPIINTENA = 0;
+    SpiaRegs.SPICTL.bit.SPIINTENA = 0; //leave disabled, described as: SPIINT/SPIRXINT Transmit interrupt/ Receive Interrupt in non FIFO mode (referred to as SPIINT) Receive interrupt in FIFO mode
 
     // Set the baud rate
     SpiaRegs.SPIBRR = SPI_BRR;
 
     // Set FREE bit
     // Halting on a breakpoint will not halt the SPI
-    SpiaRegs.SPIPRI.bit.FREE = 1;
+    //SpiaRegs.SPIPRI.bit.FREE = 1;
 
+
+
+
+    TX_BITS = 0x4061;  //reset and enable interrupts and FIFOs(interrupts when no words left in TX buffer) POSSIBLY ONE OR THE OTHER WITH SPICTL register
+    SpiaRegs.SPIFFTX.all = TX_BITS;
+    RX_BITS = 0x604F;
+    SpiaRegs.SPIFFRX.all = RX_BITS;
     // Release the SPI from reset
+    SpiaRegs.SPIFFTX.bit.SPIRST = 0;
+    SpiaRegs.SPIFFTX.bit.TXFIFO = 0;
     SpiaRegs.SPICCR.bit.SPISWRESET = 1;
 }
 
@@ -158,36 +168,6 @@ InitSpiaGpio()
 }
 
 //
-//function initializes SPI FIFOs
-//made by michael, probably wrong
-//
-void
-InitSpiFifos()
-{
-    uint16_t TX_BITS = 0x0000;
-    uint16_t RX_BITS = 0x0000;
-    SpiaRegs.SPIFFTX.all = TX_BITS;
-    //TX_BITS |= SPI_SPIFFTX_CHAN_RESET_BITS;
-    //TX_BITS |= SPI_SPIFFTX_FIFO_ENA_BITS;
-    //TX_BITS &=  ~(SPI_SPIFFTX_FIFO_RESET_BITS);
-    //TX_BITS |=  SPI_SPIFFTX_INTCLR_BITS;
-    TX_BITS = 0xA000;  //maybe make 0xA040
-    SpiaRegs.SPIFFTX.all = TX_BITS;
-   // SpiaRegs.SPIFFTX.all |=  (uint16_t) SPI_SPIFFTX_CHAN_RESET_BITS;
-  //  SpiaRegs.SPIFFTX.all |=  (uint16_t) SPI_SPIFFTX_FIFO_ENA_BITS;
-   // SpiaRegs.SPIFFTX.all &=  (uint16_t) ~(SPI_SPIFFTX_FIFO_RESET_BITS);
-  //  SpiaRegs.SPIFFTX.all |=  (uint16_t) SPI_SPIFFTX_INTCLR_BITS;
-    //SpiaRegs.SPIFFRX.all &=  (uint16_t) ~(SPI_SPIFFRX_FIFO_RESET_BITS);
-   // SpiaRegs.SPIFFRX.all |=  (uint16_t) SPI_SPIFFRX_INTCLR_BITS;
-    //SpiaRegs.SPIFFRX.all &=  (uint16_t) ~(SPI_SPIFFRX_IL_BITS);
-   // SpiaRegs.SPIFFRX.all |=  (uint16_t) (1 << 0);  //one word at a time
-    RX_BITS = 0x405F;
-    SpiaRegs.SPIFFRX.all = RX_BITS;
-
-
-}
-
-//
 //will write 16 bits to SPI TX buffer
 //
 void SPI_write_16(const uint16_t data)
@@ -208,6 +188,32 @@ void DAC_write(const uint16_t data)
     SPI_write_16(DACdata);
 }
 
+
+//function will test the DAC by playing a known frequency via a square wave
+void
+DAC_test_freq(void){
+    uint16_t DAC_test_data;
+    uint16_t i = 0;
+    while(1){
+        if(readyForMore == 0){
+            readyForMore = 1;  //interrupt ack
+            i++;
+            if(i < 5){
+                DAC_test_data = 0x00FF;             // 40 bits should take 1 millisecond to send, combined with 1 millisecond for 0's to get a frequency of 490 Hz
+            }
+            else {
+                DAC_test_data = 0x0000;
+            }
+            if(i == 9){
+                i = 0; //reset on 10th iteration
+            }
+            DAC_write(DAC_test_data);
+        }
+    }
+}
+
+
+
 //
 //prototype function to send 40 ADC audio samples to DAC sequentially
 //will need to add interrupts in future
@@ -221,6 +227,14 @@ void DAC_send(volatile int16_t *sample_buffer_2)
         data = sample_buffer_2[i] ; //data in bottom 8 bits of this result
         DAC_write(data);
     }
+}
+
+__interrupt void spi_tx_isr(void){
+    //SpiaRegs.SPICCR.bit.SPISWRESET = 0; //clears SPI INT FLAG
+    SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1; //clears TX FIFO interrupt
+    //SpiaRegs.SPICCR.bit.SPISWRESET = 1;  //reenables SPI transmit capabilities
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
+    readyForMore = 0;
 }
 //
 // End of file

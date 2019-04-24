@@ -14,12 +14,14 @@ void main(void)
     // Do all peripheral and CPU initialization. This function must be called
     // before other code is run.
     sys_init();
-    LCD_init2();
-    LCD_display1();
+   // LCD_init2();
+   // LCD_display(1);
+    uint16_t curr_display;
     // Begin application code
     while (1) {
         // Pick the demo to do based on the input character
-        char c = sci_get_char();
+       // char c = sci_get_char();
+        char c = 'd';
         volatile  int16_t sample_buffer_2[40];
         switch (c) {
 
@@ -80,24 +82,32 @@ void main(void)
             }
         //DAC test
         case 'd':
+                DAC_test_freq();
+//            dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
+//
+//            while(1) {
+//                while (!adc_done_sampling());
+//                bit_reversal(sample_buffer, fft_comp_buffer);
+//                dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
+//                rfft(fft_comp_buffer);
+//                DAC_send(sample_buffer_2);
+//                sci_send_char('$');
 
-            dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
 
-            while(1) {
-                while (!adc_done_sampling());
-                bit_reversal(sample_buffer, fft_comp_buffer);
-                dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
-                rfft(fft_comp_buffer);
-                DAC_send(sample_buffer_2);
-                sci_send_char('$');
-            }
         //LCD test
-       // case 'l':
-        //    LCD_data = 0x00AF;
-       //    LCDTimerStart;
-        //    LCD_data = 0x00AD;
-       //     LCDTimerStart;
-
+        case '1':
+            curr_display = 1;
+            //insert everything under this somewhere in main loop when ready
+            while (1){
+                if(button_pushed != 0){
+                    if(curr_display == 3){
+                         curr_display = 0;
+                    }
+                     curr_display++;
+                     LCD_display(curr_display);
+                     button_pushed = 0;
+                }
+            }
         }
     }
 }

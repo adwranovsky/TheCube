@@ -231,13 +231,7 @@ __interrupt void cpu_timer1_isr(void) {
  */
 __interrupt void cpu_timer2_isr(void) {
      CpuTimer2.InterruptCount++;
-
-    // GpioDataRegs.GPBTOGGLE.bit.GPIO33 = 1;
-    // GpioDataRegs.GPBTOGGLE.bit.GPIO32 = 1;
-
      LCDMainAction();
-     // CpuTimer2.RegsAddr->TCR.bit.TIF = 1; //clear interrupt?
-
 }
 //
 // End of file
