@@ -44,6 +44,7 @@ uint32_t detect_beat(const int32_t *frequencies);
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
+extern volatile uint16_t vsync;
 void start_cube(void);
 
 // utility functions
