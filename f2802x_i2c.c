@@ -63,6 +63,8 @@ void InitI2C(void) {
 
     // Set the I2C SCL frequency to 400 KHz
     I2caRegs.I2CPSC.bit.IPSC = 4;  // init I2C module clock, must be between 7-12 MHz (I2CPSC)
+    //I2caRegs.I2CCLKL         = 10; // init I2C SCL low time
+    //I2caRegs.I2CCLKH         = 10; // init I2C SCL high time
     I2caRegs.I2CCLKL         = 20; // init I2C SCL low time
     I2caRegs.I2CCLKH         = 20; // init I2C SCL high time
 
@@ -92,9 +94,12 @@ static void enable_i2c_interrupts(void) {
     I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
     I2caRegs.I2CFFRX.bit.RXFFINTCLR = 1;
 
+    // Make sure stop condition bit is cleared before reenabling it's interrupt
+    I2caRegs.I2CSTR.bit.SCD = 1;
+
     //I2caRegs.I2CIER.bit.ARDY      = 1; // Interrupt on Register-access-ready
     //I2caRegs.I2CIER.bit.NACK      = 1; // Interrupt on NACK
-    //I2caRegs.I2CIER.bit.SCD       = 1; // Interrupt on stop condition
+    I2caRegs.I2CIER.bit.SCD       = 1; // Interrupt on stop condition
     I2caRegs.I2CFFTX.bit.TXFFIENA = 1; // Interrupt on TX FIFO
     //I2caRegs.I2CFFRX.bit.RXFFIENA = 1; // Interrupt on RX FIFO
     EDIS;
@@ -182,9 +187,9 @@ void InitI2CGpio() {
 // The number of channels used on each driver
 #define NUM_CHANNELS      25
 
-static const uint16_t device_addrs[] = {0x3c|0, 0x3c|3, 0x3c|1};
+const uint16_t device_addrs[] = {0x3c|0, 0x3c|3, 0x3c|1};
 static struct {
-    enum {BEGIN_WRITE, WRITE, UPDATE} mode;
+    enum {WRITE, UPDATE, STOP} mode;
     uint16_t current_device; // index into device_addrs
     uint16_t *next_data;     // stores the next value to write to the fifo
     uint16_t *end;           // once next_data gets to this address, we're done writing
@@ -195,7 +200,7 @@ static struct {
  * instead of using interrupts, and is used for testing and LED driver
  * initialization.
  */
-static void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val) {
+void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val) {
     disable_i2c_interrupts();
 
     // Wait for a stop condition to be cleared before doing any operations
@@ -306,7 +311,7 @@ void start_cube(void) {
 
     // Wait for any old transactions to complete
     while (I2caRegs.I2CMDR.bit.STP);
-
+    
     enable_i2c_interrupts();
 
     // Set the next slave address
@@ -318,7 +323,8 @@ void start_cube(void) {
 
     // Load the first few data values into the FIFO
     while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
-        I2caRegs.I2CDXR = *(I2c_State.next_data++);
+        I2caRegs.I2CDXR = *I2c_State.next_data;
+        I2c_State.next_data++;
     }
 
     // Start a repeated transaction to get the snowball rolling
@@ -344,19 +350,111 @@ void alex_test(void) {
  * Handles normal I2C interrupts
  */
 __interrupt void i2c_isr1(void) {
-    uint16_t i2c_int_status = I2caRegs.I2CSTR.all;
+    uint16_t i2c_int_code = I2caRegs.I2CISRC.bit.INTCODE;
 
-    switch (I2caRegs.I2CISRC.bit.INTCODE) {
+    switch (i2c_int_code) {
+        // Nack received
         case I2C_NACK_ISRC: {
-            // Slave device sent a NACK, stop for debug.
             __asm("     ESTOP0");
         }
+
+        // I2C stop condition detected on bus
         case I2C_SCD_ISRC: {
-            // This I2C driver should never generate a stop condition while
-            // interrupts are enabled. Stop here for debug.
-            __asm("     ESTOP0");
-            break;
+            switch (I2c_State.mode) {
+                // We requested to stop elsewhere, so halt the CPU for debug
+                case STOP: __asm("     ESTOP0");
+
+                // Currently writing PWM values to the driveres
+                case WRITE: {
+                    // Figure out which device to write to next
+                    I2c_State.current_device++;
+
+                    // Check if there's more drivers that need PWM values written to them
+                    if (I2c_State.current_device < LENGTH(device_addrs)) {
+                        // Set up for the next device write
+                        I2c_State.end += NUM_CHANNELS;
+
+                        // Set the slave address to the next device
+                        I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
+
+                        // Load the FIFO with the register address we want to write to, which is
+                        // the first duty cycle register
+                        I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
+
+                        // Load the first few data values into the FIFO
+                        while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
+                            I2caRegs.I2CDXR = *I2c_State.next_data;
+                            I2c_State.next_data++;
+                        }
+
+                        // Start the new transaction
+                        I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+                    } else {
+                        // We're all done writing new values, so switch to the update state
+                        I2c_State.current_device = 0;
+                        I2c_State.mode = UPDATE;
+
+                        // Write 0 to the update register on the current device
+                        I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
+                        I2caRegs.I2CDXR = UPDATE_REG;
+                        I2caRegs.I2CDXR = 0;
+                        I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+                    }
+                    break;
+                }
+
+                // Currently updating the PWM outputs based on what was loaded
+                // during the write state
+                case UPDATE: {
+                    // Figure out which driver to update next
+                    I2c_State.current_device++;
+
+                    // Check if there's more drivers to update
+                    if (I2c_State.current_device < LENGTH(device_addrs)) {
+                        // Write 0 to the update register on the current device
+                        I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
+                        I2caRegs.I2CDXR = UPDATE_REG;
+                        I2caRegs.I2CDXR = 0;
+                        I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+                    } else {
+                        // Updated all the drivers, so transition back to the write state
+                        I2c_State.current_device = 0;
+                        I2c_State.mode = WRITE;
+
+                        // Check if this was the last layer, move back to the
+                        // beginning of the buffer. Signal to the main
+                        // application using vsync.
+                        //if (framebuffer + LENGTH(framebuffer) == I2c_State.next_data)
+                        {// Only use the first layer for now
+                            I2c_State.next_data = framebuffer;
+                            vsync = 1;
+                        }
+
+                        I2c_State.end = I2c_State.next_data + NUM_CHANNELS;
+
+                        __asm("     ESTOP0"); // DEBUG
+
+                        // Set the slave address to the next device
+                        I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
+
+                        // Load the FIFO with the register address we want to write to, which is
+                        // the first duty cycle register
+                        I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
+
+                        // Load the first few data values into the FIFO
+                        while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
+                            I2caRegs.I2CDXR = *I2c_State.next_data;
+                            I2c_State.next_data++;
+                        }
+
+                        // Start the new transaction
+                        I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+                    }
+                    break;
+                }
+            }
         }
+
         default:
             // Unhandled interrupt type, stop for debug. The I2C interrupts were
             // probably configured wrong.
@@ -373,75 +471,58 @@ __interrupt void i2c_isr1(void) {
 __interrupt void i2c_isr2(void) {
     if (I2caRegs.I2CFFTX.bit.TXFFINT) {
         switch (I2c_State.mode) {
-            case BEGIN_WRITE:
-                // Set up for the next state
-                I2c_State.mode = WRITE;
-                I2c_State.end += NUM_CHANNELS;
-
-                // Set the slave address to the next device
-                I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
-
-                // Load the FIFO with the register address we want to write to, which is
-                // the first duty cycle register
-                I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
-
-                // Load the first few data values into the FIFO
-                while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
-                    I2caRegs.I2CDXR = *(I2c_State.next_data++);
-                }
-
-                // Start the new transaction
-                I2caRegs.I2CMDR.all = REPEAT_MODE_START;
-
-                break;
-
-            case WRITE:
+            case WRITE: {
                 // Load the FIFO until it is full or we run out of data
                 while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
                     // Put the next value into the FIFO
-                    I2caRegs.I2CDXR = *(I2c_State.next_data++);
+                    I2caRegs.I2CDXR = *I2c_State.next_data;
+                    I2c_State.next_data++;
 
                     // Check if we're out of data to load
-                    if (I2c_State.next_data == I2c_State.end) {
-                        // Switch to the next driver
-                        I2c_State.current_device++;
-                        I2c_State.mode = BEGIN_WRITE;
+                    if (I2c_State.next_data >= I2c_State.end) {
+                        // Ensure stop condition detected bit is clear so that
+                        // the interrupt is generated
+                        I2caRegs.I2CSTR.bit.SCD = 1;
 
-                        // If this was the last driver, switch instead to the update state
-                        if (I2c_State.current_device == LENGTH(device_addrs)) {
-                            I2c_State.mode = UPDATE;
-                            I2c_State.current_device = 0;
-                        }
+                        // If we're out of data to load, signal a stop condition on the bus
+                        I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
+
+                        /*
+                         * ^^^^^^^^^^^^ generates stop condition between drivers ^^^^^^^^^^^^^^^
+                         * \/\/\/\/ generate repeated start condition between drivers \/\/\/\/\/
+                         */
+
+
+                        //// Switch to the next driver
+                        //I2c_State.current_device++;
+                        //I2c_State.mode = BEGIN_WRITE;
+
+                        //// If this was the last driver, switch instead to the update state
+                        //if (I2c_State.current_device == LENGTH(device_addrs)) {
+                        //    I2c_State.mode = UPDATE;
+                        //    I2c_State.current_device = 0;
+                        //}
 
                         break;
                     }
                 }
                 break;
+            }
 
-            case UPDATE:
-                // Write to the update register on the next driver
-                I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
-                I2caRegs.I2CDXR = UPDATE_REG;
-                I2caRegs.I2CDXR = 0;
-                I2caRegs.I2CMDR.all = REPEAT_MODE_START;
-
-                I2c_State.current_device++;
-
-                // If this was the last driver, begin writing new values
-                if (I2c_State.current_device == LENGTH(device_addrs)) {
-                    I2c_State.mode = BEGIN_WRITE;
-                    I2c_State.current_device = 0;
-
-                    // If this was the last layer, reset the frame pointer back
-                    // to the beginning, and signal to the main application
-                    // that we've completed a strobe of the entire cube.
-                    //if (framebuffer + LENGTH(framebuffer) == I2c_State.next_data) {
-                    { // Only use the first layer for now
-                        I2c_State.next_data = framebuffer;
-                        vsync = 1;
-                    }
-                }
+            case UPDATE: {
+                // The entire update command fits in the FIFO, so we can just
+                // signal a stop condition since we know the command is
+                // complete.
+                I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
                 break;
+            }
+
+            // The STOP state is used for debug. If we're in the stop state
+            // signal a stop condition.
+            case STOP: {
+                I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
+                break;
+            }
         }
 
         // clear the TX fifo interrupt

@@ -8,6 +8,7 @@
 #include "f2802x_examples.h"
 
 void framebuffer_test(void);
+void color_test(void);
 extern void alex_test(void);
 
 void main(void) {
@@ -19,11 +20,12 @@ void main(void) {
     //CpuTimer0Regs.TCR.all = 0x4001;
     //while (CpuTimer0.InterruptCount < 2);
 
-    start_cube();
+    framebuffer_test();
+
+    //start_cube();
     //alex_test();
 
-    framebuffer_test();
-    //led_driver_test();
+    led_driver_test();
 
     while (1) {
     }
@@ -32,7 +34,7 @@ void main(void) {
 void framebuffer_test(void) {
     int i;
 
-    for (i = 1; i <= 75; i++) {
-        framebuffer[i] = i;
+    for (i = 0; i < 75; i++) {
+        framebuffer[i] = i+1;
     }
 }
