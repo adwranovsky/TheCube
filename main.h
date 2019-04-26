@@ -60,6 +60,8 @@ enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
 extern volatile uint16_t vsync;
+extern const uint16_t device_addrs[3];
+void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val);
 void start_cube(void);
 void led_driver_test(void);
 
