@@ -64,6 +64,7 @@ extern const uint16_t device_addrs[3];
 void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val);
 void start_cube(void);
 void led_driver_test(void);
+void enable_layer(uint16_t layer_num);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);

@@ -133,12 +133,29 @@ void sys_init(void) {
     //
 
     //
-    // Configure GPIO0 as a GPIO output pin
+    // Configure GPIO0-4 as a GPIO output pins. These are the layer select pins
     //
     EALLOW;
     GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 0;
     GpioCtrlRegs.GPADIR.bit.GPIO0 = 1;
+
+    GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO1 = 1;
+
+    GpioCtrlRegs.GPAMUX1.bit.GPIO2 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO2 = 1;
+
+    GpioCtrlRegs.GPAMUX1.bit.GPIO3 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO3 = 1;
+
+    GpioCtrlRegs.GPAMUX1.bit.GPIO4 = 0;
+    GpioCtrlRegs.GPADIR.bit.GPIO4 = 1;
     EDIS;
+
+    //
+    // Turn off power to all layers
+    //
+    GpioDataRegs.GPACLEAR.all = 0x001F;
 
     //
     // Enable CPU interrupts

@@ -2,6 +2,9 @@
  * Author: Alex Wranovsky
  */
 
+#include "F2802x_Device.h"
+#include "f2802x_examples.h"
+
 #include "main.h"
 
 // Converts a 32 bit number into an ascii string
@@ -40,4 +43,28 @@ const char *itoa(int32_t num, int is_signed, int base) {
         string[index--] = '-';
 
     return string + index + 1;
+}
+
+void enable_layer(uint16_t layer_num) {
+    // Turn off all layers first
+    GpioDataRegs.GPACLEAR.all = 0x001F;
+
+    // Turn on the selected layer
+    switch (layer_num) {
+        case 0:
+            GpioDataRegs.GPASET.all = 0x0001;
+            break;
+        case 1:
+            GpioDataRegs.GPASET.all = 0x0002;
+            break;
+        case 2:
+            GpioDataRegs.GPASET.all = 0x0004;
+            break;
+        case 3:
+            GpioDataRegs.GPASET.all = 0x0008;
+            break;
+        case 4:
+            GpioDataRegs.GPASET.all = 0x0010;
+            break;
+    }
 }
