@@ -26,9 +26,14 @@ void main(void) {
 
     //led_driver_test();
 
-    int16_t value = 0, step = 0;
+    int16_t values[5] = {254*0/4, 254*1/4, 254*2/4, 254*3/4, 254*4/4};
+    int16_t steps[5] = {1, 1, 1, 1, 1};
     while (1) {
-        strobe(0, 0, 0, R, &value, &step);
+        strobe(0, 0, 0, R, &values[0], &steps[0]);
+        strobe(0, 1, 1, R, &values[1], &steps[1]);
+        strobe(0, 2, 2, R, &values[2], &steps[2]);
+        strobe(0, 3, 3, R, &values[3], &steps[3]);
+        strobe(0, 4, 4, R, &values[4], &steps[4]);
     }
 }
 
@@ -59,6 +64,7 @@ void init_framebuffer(void) {
     int i;
 
     for (i = 0; i < LENGTH(framebuffer); i++) {
-        framebuffer[i] = 10;
+        framebuffer[i] = 0;
     }
 }
+
