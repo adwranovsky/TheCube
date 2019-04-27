@@ -4,6 +4,7 @@
 *.vim
 
 # ignore code composer output
-Debug
+Debug/
 ALEX_TEST/
+Demo/
 .launches/
