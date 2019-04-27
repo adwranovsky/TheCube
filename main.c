@@ -14,15 +14,17 @@ void main(void)
     // Do all peripheral and CPU initialization. This function must be called
     // before other code is run.
     sys_init();
-   // LCD_init2();
-   // LCD_display(1);
-    uint16_t curr_display;
+    LCD_init2();
+    LCD_display(1);
     // Begin application code
     while (1) {
         // Pick the demo to do based on the input character
        // char c = sci_get_char();
+
+        // Start the CPU timer, which triggers the ADC interrupt at regular intervals
+        CpuTimer1Regs.TCR.bit.TSS = 0;
+
         char c = 'd';
-        volatile  int16_t sample_buffer_2[40];
         switch (c) {
 
         // FFT demo. Used by the f28027_fft_display.py script.
@@ -82,29 +84,48 @@ void main(void)
             }
         //DAC test
         case 'd':
-                DAC_test_freq();
-//            dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
-//
-//            while(1) {
-//                while (!adc_done_sampling());
-//                bit_reversal(sample_buffer, fft_comp_buffer);
-//                dac_start_sampling(sample_buffer, LENGTH(sample_buffer), sample_buffer_2);
-//                rfft(fft_comp_buffer);
-//                DAC_send(sample_buffer_2);
-//                sci_send_char('$');
-
+            // DAC_test_freq();
+            adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
+            while(1) {
+                if(button_pushed != 0){
+                    if(curr_display == 6){
+                         curr_display = 0;
+                    }
+                     curr_display++;
+                     if(curr_display < 4){
+                         LCD_display(curr_display);
+                     }
+                     button_pushed = 0;
+                }
+                while (!adc_done_sampling());
+                bit_reversal(sample_buffer, fft_comp_buffer);
+                adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
+                rfft(fft_comp_buffer);
+                 DAC_send(); //this gets called as soon as buffer is populated with raw sample data so that dac can start pumping it out
+                // sci_send_char('$');
+                uint32_t beat = detect_beat(fft_comp_buffer);
+                //sci_send_string(itoa(beat, 0, 10));
+                //sci_send_string("\r\n");
+                if (beat > 10) {
+                    GpioDataRegs.GPACLEAR.bit.GPIO0 = 1;
+                } else {
+                    GpioDataRegs.GPASET.bit.GPIO0 = 1;
+                }
+            }
 
         //LCD test
         case '1':
             curr_display = 1;
-            //insert everything under this somewhere in main loop when ready
+            //insert everything under this somewhere in main loop when ready, also does DAC stuff
             while (1){
                 if(button_pushed != 0){
-                    if(curr_display == 3){
+                    if(curr_display == 6){
                          curr_display = 0;
                     }
                      curr_display++;
-                     LCD_display(curr_display);
+                     if(curr_display < 4){
+                         LCD_display(curr_display);
+                     }
                      button_pushed = 0;
                 }
             }

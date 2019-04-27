@@ -77,7 +77,7 @@ void sys_init(void) {
     PieVectTable.SCITXINTA = &sci_tx_isr;
     PieVectTable.ADCINT1   = &adc_int1_isr;
     PieVectTable.XINT1     = &gpio_xint1_isr;
-    PieVectTable.SPITXINTA = &spi_tx_isr;
+    PieVectTable.SPIRXINTA = &spi_isr;
     EDIS;      // This is needed to disable write to EALLOW protected registers
 
     //
@@ -86,8 +86,8 @@ void sys_init(void) {
     InitCpuTimers();
     InitAdc();
     InitSci();
-    InitSpiGpio();
     InitSpi();
+    InitSpiGpio();
     InitLCD();
     //
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
@@ -139,7 +139,7 @@ void sys_init(void) {
     // Enable CPU interrupts
     //
     IER |= M_INT1;  // CPU timer 0 and ADC interrupt 1 and XINT1 come in on INT1
-    IER |= M_INT6;  // SPITXINT comes in on INT6
+    IER |= M_INT6;  // SPI INT comes in on INT6
     IER |= M_INT9;  // SCI interrupts come in on INT9
     IER |= M_INT13; // CPU timer 1 comes in on INT13
     IER |= M_INT14; // CPU timer 2 comes in on INT14
@@ -152,7 +152,7 @@ void sys_init(void) {
     PieCtrlRegs.PIEIER1.bit.INTx1  = 1; // Enable group 1 interrupt 1 (ADCINT1)
     PieCtrlRegs.PIEIER1.bit.INTx4  = 1; // enable group 1 interrupt 4 (GPIO XINT1)
     PieCtrlRegs.PIEIER1.bit.INTx7  = 1; // Enable group 1 interrupt 7
-    PieCtrlRegs.PIEIER6.bit.INTx2  = 1; // Enable Group 6 interrupt 2 (SPITXINTA)
+    PieCtrlRegs.PIEIER6.bit.INTx1  = 1; // Enable Group 6 interrupt 1 (SPIINTA)
     PieCtrlRegs.PIEIER9.bit.INTx1  = 1; // Enable group 9 interrupt 1 (SCARXINTA)
     PieCtrlRegs.PIEIER9.bit.INTx2  = 1; // Enable group 9 interrupt 2 (SCATXINTA)
 

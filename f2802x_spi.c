@@ -46,17 +46,16 @@
 #include "F2802x_Device.h"     // Headerfile Include File
 #include "f2802x_examples.h"   // Examples Include File
 #include "spi.h"               // bitmask stuff
+#include "main.h"
 
-//
-// Calculate BRR: 7-bit baud rate register value
-// SPI CLK freq = 500 kHz
-// LSPCLK freq  = CPU freq / 4  (by default)
-// BRR          = (LSPCLK freq / SPI CLK freq) - 1
-//
 
-#define SPI_BRR        ((60E6 / 4) / 80E3) - 1   //DAC at 80kHz
+
+#define SPI_BRR        3 // clock is at 3.7 MHz --->>> may need to slow down to match rate of data from ADC (80 KHz)
+
 volatile uint16_t readyForMore = 0; // SPI TX FIFO is ready for new data
+volatile  int16_t sample_buffer_2[40];
 
+uint16_t dataSent = 0;              // number of transmissions made from 40 in buffer
 //
 // InitSPI - This function initializes the SPI(s) to a known state.
 //
@@ -64,8 +63,7 @@ void
 InitSpi(void)
 {
     // Initialize SPI-A
-    uint16_t TX_BITS = 0x0000;
-    uint16_t RX_BITS = 0x0000;
+
     // Set reset low before configuration changes
     // Clock polarity (0 == rising, 1 == falling)
     // 16-bit character
@@ -82,7 +80,7 @@ InitSpi(void)
     SpiaRegs.SPICTL.bit.MASTER_SLAVE = 1;
     SpiaRegs.SPICTL.bit.TALK = 1;
     SpiaRegs.SPICTL.bit.CLK_PHASE = 0;
-    SpiaRegs.SPICTL.bit.SPIINTENA = 0; //leave disabled, described as: SPIINT/SPIRXINT Transmit interrupt/ Receive Interrupt in non FIFO mode (referred to as SPIINT) Receive interrupt in FIFO mode
+    SpiaRegs.SPICTL.bit.SPIINTENA = 1; //leave disabled, described as: SPIINT/SPIRXINT Transmit interrupt/ Receive Interrupt in non FIFO mode (referred to as SPIINT) Receive interrupt in FIFO mode
 
     // Set the baud rate
     SpiaRegs.SPIBRR = SPI_BRR;
@@ -94,13 +92,11 @@ InitSpi(void)
 
 
 
-    TX_BITS = 0x4061;  //reset and enable interrupts and FIFOs(interrupts when no words left in TX buffer) POSSIBLY ONE OR THE OTHER WITH SPICTL register
-    SpiaRegs.SPIFFTX.all = TX_BITS;
-    RX_BITS = 0x604F;
-    SpiaRegs.SPIFFRX.all = RX_BITS;
+    //TX_BITS = 0x4061;  //reset and enable interrupts and FIFOs(interrupts when no words left in TX buffer) POSSIBLY ONE OR THE OTHER WITH SPICTL register
+    SpiaRegs.SPIFFTX.all = 0x8000;
+   // RX_BITS = 0x604F;
+    SpiaRegs.SPIFFRX.all = 0x0000;
     // Release the SPI from reset
-    SpiaRegs.SPIFFTX.bit.SPIRST = 0;
-    SpiaRegs.SPIFFTX.bit.TXFIFO = 0;
     SpiaRegs.SPICCR.bit.SPISWRESET = 1;
 }
 
@@ -172,6 +168,7 @@ InitSpiaGpio()
 //
 void SPI_write_16(const uint16_t data)
 {
+    SpiaRegs.SPIDAT = data;
     SpiaRegs.SPITXBUF = data;
 }
 
@@ -184,8 +181,42 @@ void SPI_write_16(const uint16_t data)
 void DAC_write(const uint16_t data)
 {
     uint16_t DACdata = 0x0000;
-    DACdata = data << 4;
-    SPI_write_16(DACdata);
+
+    //functions will handle audio distortions based on button presses
+    if(curr_display == 1){ // half freq
+         DACdata = (data / 8) << 4;
+         SPI_write_16(DACdata);
+    }
+    else if(curr_display == 2){ // decrease resolution
+      //  DACdata = (data << 4) & 0x0F00;
+        DACdata = data;
+        SPI_write_16(DACdata);
+    }
+    else if(curr_display == 3){ // decrease resolution
+          //  DACdata = (data << 4) & 0x0F00;
+            DACdata = (data /16) << 4;                                    //  -------------
+            SPI_write_16(DACdata);
+        }
+    else if(curr_display == 4){ // decrease resolution
+          //  DACdata = (data << 4) & 0x0F00;
+            DACdata = (data /32) << 4;
+            SPI_write_16(DACdata);
+        }
+    else if(curr_display == 5){ // decrease resolution
+          //  DACdata = (data << 4) & 0x0F00;
+            DACdata = (data /64) << 4;
+            SPI_write_16(DACdata);
+        }
+
+    else if(curr_display == 6){ //double freq
+        DACdata = (data / 8) << 4;
+      //  DACdata = ((data * 2) << 4) & 0x0FF0; //need to keep data framed
+        SPI_write_16(DACdata);
+    }
+    else{
+        DACdata = data << 4;
+        SPI_write_16(DACdata);
+    }
 }
 
 
@@ -198,13 +229,13 @@ DAC_test_freq(void){
         if(readyForMore == 0){
             readyForMore = 1;  //interrupt ack
             i++;
-            if(i < 5){
+            if(i < 10){
                 DAC_test_data = 0x00FF;             // 40 bits should take 1 millisecond to send, combined with 1 millisecond for 0's to get a frequency of 490 Hz
             }
             else {
                 DAC_test_data = 0x0000;
             }
-            if(i == 9){
+            if(i == 19){
                 i = 0; //reset on 10th iteration
             }
             DAC_write(DAC_test_data);
@@ -216,23 +247,43 @@ DAC_test_freq(void){
 
 //
 //prototype function to send 40 ADC audio samples to DAC sequentially
-//will need to add interrupts in future
 //Author - Michael
 //
-void DAC_send(volatile int16_t *sample_buffer_2)
+void DAC_send(void)
 {
     uint16_t data;
-    uint16_t i;
-    for (i = 0; i < 40 ; i++){
-        data = sample_buffer_2[i] ; //data in bottom 8 bits of this result
-        DAC_write(data);
+    if (readyForMore == 0){
+        readyForMore = 1;  //NOT ready for more
+        if(dataSent >= 40){ //function called because final data finished sending; abort
+            dataSent = 0;
+            readyForMore = 0;  //psyche, its actually ready for more
+            return;
+        }
+        else{
+            data = sample_buffer_2[dataSent];
+            DAC_write(data);
+            dataSent++;
+        }
     }
 }
 
-__interrupt void spi_tx_isr(void){
-    //SpiaRegs.SPICCR.bit.SPISWRESET = 0; //clears SPI INT FLAG
-    SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1; //clears TX FIFO interrupt
-    //SpiaRegs.SPICCR.bit.SPISWRESET = 1;  //reenables SPI transmit capabilities
+//
+//prototype function to send a single ADC audio samples to DAC, called from adc interrupt
+//Author - Michael
+//
+void DAC_send_2(uint16_t ADC_data)
+{
+    if (readyForMore == 0){
+        readyForMore = 1;  //NOT ready for more
+        DAC_write(ADC_data);
+    }
+}
+
+
+__interrupt void spi_isr(void){
+    SpiaRegs.SPICCR.bit.SPISWRESET = 0; //clears SPI INT FLAG
+    //SpiaRegs.SPIFFTX.bit.TXFFINTCLR = 1; //clears TX FIFO interrupt
+    SpiaRegs.SPICCR.bit.SPISWRESET = 1;  //reenables SPI transmit capabilities
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
     readyForMore = 0;
 }

@@ -52,17 +52,14 @@
 //
 #define ADC_usDELAY  1000L
 
-static struct {
-    volatile size_t index;
-    size_t length;
-    volatile int32_t *data;
-} Sample_Buffer;
 
 static struct {
     volatile size_t index;
     size_t length;
-    volatile int16_t *data;
-} Sample_Buffer_2; // buffer for DAC MN
+    volatile int32_t *data;
+    volatile uint16_t run_flag;
+} Sample_Buffer;
+
 
 //
 // InitAdc - This function initializes ADC to a known state.
@@ -484,9 +481,7 @@ void adc_start_sampling(volatile int32_t *buffer, size_t length) {
     Sample_Buffer.data = buffer;
     Sample_Buffer.length = length;
     Sample_Buffer.index = 0;
-
-    // Start the CPU timer, which triggers the ADC interrupt at regular intervals
-    CpuTimer1Regs.TCR.bit.TSS = 0;
+    Sample_Buffer.run_flag = 1;
 }
 
 int adc_done_sampling(void) {
@@ -500,21 +495,26 @@ __interrupt void adc_int1_isr(void) {
     // sample buffer for averaging the last several samples together
     static uint16_t buffer[40];
     static uint16_t index = 0;
+    uint16_t DAC_data;
 
     // Get the converted sample from SOC0
     buffer[index++] = AdcResult.ADCRESULT0;
-
-    if (index == LENGTH(buffer)) {
+    DAC_data = AdcResult.ADCRESULT0 << 4;
+    DAC_send_2(DAC_data);
+    if ((Sample_Buffer.run_flag != 0) &&( index == LENGTH(buffer))) {
         index = 0;
 
         // Average all 40 samples together
         uint32_t result = 0;
         uint16_t i;
         for (i = 0; i < LENGTH(buffer); i++) {
-            Sample_Buffer_2.data[i] = (uint8_t) ((buffer[i] && 0xFF00) >> 8); //populate separate buffer to feed DAC from SPI (most sig 8 bits of sample) MN
             result += buffer[i]; // unlikely to overflow, since these are 12 bit ADC samples, going into a 32 bit wide integer
         }
         result /= LENGTH(buffer);
+
+        //Low pass filter test
+        //DAC_data = result << 4;
+        //DAC_send_2(DAC_data);
 
         // Place the averaged 12-bit samples in the buffer. Put the most
         // significant bit of the sample in bit 16 of the result. We do this
@@ -526,7 +526,8 @@ __interrupt void adc_int1_isr(void) {
         // If done, turn off CPU timer 1. CPU timer 1 triggers the start of an ADC
         // sample, so turning it off stops ADC sampling.
         if (Sample_Buffer.index == Sample_Buffer.length) {
-            CpuTimer1Regs.TCR.bit.TSS = 1;
+            Sample_Buffer.run_flag = 0;
+          //  CpuTimer1Regs.TCR.bit.TSS = 1; Dont turn off timer, just tell
         }
     }
 
@@ -534,32 +535,7 @@ __interrupt void adc_int1_isr(void) {
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;  // acknowledge this interrupt with the PIE
 }
 
-/*
- * COPY OF adc_start_sampling method above so that Michael doesnt break things
- * Audio sampling control flow:
- * 1. Set up sample buffer
- * 2. Enable timer interrupt
- * 3. Timer interrupt triggers an SoC
- * 4. When SoC is complete, and ADC interrupt is triggered
- * 5. ADC interrupt places sample in buffer
- * 6. Once the buffer is full, ADC interrupt turns off timer and signals to the main application
- */
-void dac_start_sampling(volatile int32_t *buffer, size_t length, volatile int16_t *buffer2) {
-    // Since the ADC interrupt stuffs a 0 valued imaginary component after each
-    // real-valued sample, the length must be even
-    if (length % 2)
-        return;
 
-    // Set the ISR state info
-    Sample_Buffer.data = buffer;
-    Sample_Buffer.length = length;
-    Sample_Buffer.index = 0;
-    Sample_Buffer_2.data = buffer2;
-    Sample_Buffer_2.length = length;
-    Sample_Buffer_2.index = 0;
-    // Start the CPU timer, which triggers the ADC interrupt at regular intervals
-    CpuTimer1Regs.TCR.bit.TSS = 0;
-}
 
 
 //
