@@ -22,10 +22,12 @@ void main(void) {
 
     framebuffer_test();
 
-    //start_cube();
+    start_cube();
     //alex_test();
 
-    led_driver_test();
+    //led_driver_test();
+
+    while (!vsync);
 
     while (1) {
     }

@@ -173,6 +173,9 @@ void InitI2CGpio() {
 //#define REPEAT_MODE_STOP  0x0ea0
 #define REPEAT_MODE_START 0x66a0
 #define REPEAT_MODE_STOP  0x4ea0
+#define COUNT_MODE_START 0x6620
+#define COUNT_MODE_STOP  0x4e20
+#define SEND_STOP 0x4e20
 #define FIFO_DEPTH        4
 
 // LED driver register addresses
@@ -311,7 +314,7 @@ void start_cube(void) {
 
     // Wait for any old transactions to complete
     while (I2caRegs.I2CMDR.bit.STP);
-    
+
     enable_i2c_interrupts();
 
     // Set the next slave address
@@ -362,7 +365,8 @@ __interrupt void i2c_isr1(void) {
         case I2C_SCD_ISRC: {
             switch (I2c_State.mode) {
                 // We requested to stop elsewhere, so halt the CPU for debug
-                case STOP: __asm("     ESTOP0");
+                case STOP:
+                    __asm("     ESTOP0");
 
                 // Currently writing PWM values to the driveres
                 case WRITE: {
@@ -389,6 +393,10 @@ __interrupt void i2c_isr1(void) {
 
                         // Start the new transaction
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+
+                        // Enable the FIFO interrupt again
+                        I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+                        I2caRegs.I2CFFTX.bit.TXFFIENA = 1;
                     } else {
                         // We're all done writing new values, so switch to the update state
                         I2c_State.current_device = 0;
@@ -399,6 +407,10 @@ __interrupt void i2c_isr1(void) {
                         I2caRegs.I2CDXR = UPDATE_REG;
                         I2caRegs.I2CDXR = 0;
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+
+                        // Enable the FIFO interrupt again
+                        I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+                        I2caRegs.I2CFFTX.bit.TXFFIENA = 1;
                     }
                     break;
                 }
@@ -416,6 +428,10 @@ __interrupt void i2c_isr1(void) {
                         I2caRegs.I2CDXR = UPDATE_REG;
                         I2caRegs.I2CDXR = 0;
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+
+                        // Enable the FIFO interrupt again
+                        I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+                        I2caRegs.I2CFFTX.bit.TXFFIENA = 1;
                     } else {
                         // Updated all the drivers, so transition back to the write state
                         I2c_State.current_device = 0;
@@ -432,8 +448,6 @@ __interrupt void i2c_isr1(void) {
 
                         I2c_State.end = I2c_State.next_data + NUM_CHANNELS;
 
-                        __asm("     ESTOP0"); // DEBUG
-
                         // Set the slave address to the next device
                         I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
 
@@ -449,10 +463,15 @@ __interrupt void i2c_isr1(void) {
 
                         // Start the new transaction
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+
+                        // Enable the FIFO interrupt again
+                        I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+                        I2caRegs.I2CFFTX.bit.TXFFIENA = 1;
                     }
                     break;
                 }
             }
+            break;
         }
 
         default:
@@ -487,21 +506,8 @@ __interrupt void i2c_isr2(void) {
                         // If we're out of data to load, signal a stop condition on the bus
                         I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
 
-                        /*
-                         * ^^^^^^^^^^^^ generates stop condition between drivers ^^^^^^^^^^^^^^^
-                         * \/\/\/\/ generate repeated start condition between drivers \/\/\/\/\/
-                         */
-
-
-                        //// Switch to the next driver
-                        //I2c_State.current_device++;
-                        //I2c_State.mode = BEGIN_WRITE;
-
-                        //// If this was the last driver, switch instead to the update state
-                        //if (I2c_State.current_device == LENGTH(device_addrs)) {
-                        //    I2c_State.mode = UPDATE;
-                        //    I2c_State.current_device = 0;
-                        //}
+                        // Also disable this interrupt or else it keeps on triggering
+                        I2caRegs.I2CFFTX.bit.TXFFIENA = 0;
 
                         break;
                     }
@@ -514,6 +520,9 @@ __interrupt void i2c_isr2(void) {
                 // signal a stop condition since we know the command is
                 // complete.
                 I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
+
+                // Disable this interrupt or else it keeps on triggering
+                I2caRegs.I2CFFTX.bit.TXFFIENA = 0;
                 break;
             }
 
@@ -521,6 +530,9 @@ __interrupt void i2c_isr2(void) {
             // signal a stop condition.
             case STOP: {
                 I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
+
+                // Disable this interrupt or else it keeps on triggering
+                I2caRegs.I2CFFTX.bit.TXFFIENA = 0;
                 break;
             }
         }
