@@ -217,6 +217,11 @@ void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val) {
     I2caRegs.I2CDXR = reg_val;
 
     // Signal to the I2C module that it should start the transaction
+    // The I2C bus doesn't start again without 4 NOPs here
+    __asm("    NOP");
+    __asm("    NOP");
+    __asm("    NOP");
+    __asm("    NOP");
     I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 
     // Wait for the FIFO to empty itself
@@ -332,21 +337,12 @@ void start_cube(void) {
 
     // Start a repeated transaction to get the snowball rolling
     I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
+    // The I2C bus doesn't start again without 4 NOPs here
+    __asm("    NOP");
+    __asm("    NOP");
+    __asm("    NOP");
+    __asm("    NOP");
     I2caRegs.I2CMDR.all = REPEAT_MODE_START;
-}
-
-void alex_test(void) {
-    enable_i2c_interrupts();
-
-    while (I2caRegs.I2CMDR.bit.STP);
-    I2caRegs.I2CSAR = device_addrs[0];
-    I2caRegs.I2CDXR = DUTY_CYCLE_1_REG;
-    while (I2caRegs.I2CFFTX.bit.TXFFST < FIFO_DEPTH) {
-        I2caRegs.I2CDXR = 0xbb;
-    }
-    I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
-    I2caRegs.I2CMDR.all = REPEAT_MODE_START;
-    while(1);
 }
 
 /*
@@ -392,6 +388,11 @@ __interrupt void i2c_isr1(void) {
                         }
 
                         // Start the new transaction
+                        // The I2C bus doesn't start again without 4 NOPs here
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 
                         // Enable the FIFO interrupt again
@@ -406,6 +407,11 @@ __interrupt void i2c_isr1(void) {
                         I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
                         I2caRegs.I2CDXR = UPDATE_REG;
                         I2caRegs.I2CDXR = 0;
+                        // The I2C bus doesn't start again without 4 NOPs here
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 
                         // Enable the FIFO interrupt again
@@ -468,6 +474,11 @@ __interrupt void i2c_isr1(void) {
                         }
 
                         // Start the new transaction
+                        // The I2C bus doesn't start again without 4 NOPs here
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 
                         // Enable the FIFO interrupt again
