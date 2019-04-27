@@ -91,7 +91,6 @@ void sys_init(void) {
     InitSpi();
     InitSpiGpio();
     InitLCD();
-    InitSpiFifos();
     InitI2C();
 
     //
