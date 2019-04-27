@@ -95,7 +95,7 @@ static void enable_i2c_interrupts(void) {
     I2caRegs.I2CFFRX.bit.RXFFINTCLR = 1;
 
     // Make sure stop condition bit is cleared before reenabling it's interrupt
-    I2caRegs.I2CSTR.bit.SCD = 1;
+    //I2caRegs.I2CSTR.bit.SCD = 1;
 
     //I2caRegs.I2CIER.bit.ARDY      = 1; // Interrupt on Register-access-ready
     //I2caRegs.I2CIER.bit.NACK      = 1; // Interrupt on NACK
@@ -415,9 +415,10 @@ __interrupt void i2c_isr1(void) {
                     break;
                 }
 
-                // Currently updating the PWM outputs based on what was loaded
-                // during the write state
+                // The update state forces changes to the LED driver registers
+                // out to the output pins.
                 case UPDATE: {
+
                     // Figure out which driver to update next
                     I2c_State.current_device++;
 
@@ -427,6 +428,11 @@ __interrupt void i2c_isr1(void) {
                         I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
                         I2caRegs.I2CDXR = UPDATE_REG;
                         I2caRegs.I2CDXR = 0;
+                        // The I2C bus doesn't start again without 4 NOPs here
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
+                        __asm("    NOP");
                         I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 
                         // Enable the FIFO interrupt again
@@ -471,6 +477,9 @@ __interrupt void i2c_isr1(void) {
                     break;
                 }
             }
+
+            //// Make sure the stop condition is cleared
+            I2caRegs.I2CSTR.bit.SCD = 1;
             break;
         }
 
@@ -499,10 +508,6 @@ __interrupt void i2c_isr2(void) {
 
                     // Check if we're out of data to load
                     if (I2c_State.next_data >= I2c_State.end) {
-                        // Ensure stop condition detected bit is clear so that
-                        // the interrupt is generated
-                        I2caRegs.I2CSTR.bit.SCD = 1;
-
                         // If we're out of data to load, signal a stop condition on the bus
                         I2caRegs.I2CMDR.all = REPEAT_MODE_STOP;
 
@@ -523,6 +528,9 @@ __interrupt void i2c_isr2(void) {
 
                 // Disable this interrupt or else it keeps on triggering
                 I2caRegs.I2CFFTX.bit.TXFFIENA = 0;
+
+                // Make sure the stop condition bit is clear so the interrupt can trigger
+                //I2caRegs.I2CSTR.bit.SCD = 1;
                 break;
             }
 

@@ -203,11 +203,6 @@ __interrupt void cpu_timer0_isr(void) {
     CpuTimer0.InterruptCount++;
 
     //
-    // Toggle GPIO0 once per 500 milliseconds
-    //
-    GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;
-
-    //
     // Acknowledge this interrupt to receive more interrupts from group 1
     //
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP1;
