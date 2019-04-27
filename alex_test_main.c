@@ -7,9 +7,9 @@
 #include "F2802x_Device.h"
 #include "f2802x_examples.h"
 
-void framebuffer_test(void);
-void color_test(void);
-extern void alex_test(void);
+void init_framebuffer(void);
+void strobe(uint16_t layer, uint16_t row, uint16_t column,
+    enum Color color, int16_t *value, int16_t *step);
 
 void main(void) {
     sys_init();
@@ -20,22 +20,45 @@ void main(void) {
     //CpuTimer0Regs.TCR.all = 0x4001;
     //while (CpuTimer0.InterruptCount < 2);
 
-    framebuffer_test();
+    init_framebuffer();
 
     start_cube();
 
     //led_driver_test();
 
-    while (!vsync);
-
+    int16_t value = 0, step = 0;
     while (1) {
+        strobe(0, 0, 0, R, &value, &step);
     }
 }
 
-void framebuffer_test(void) {
+void strobe(
+    uint16_t layer,
+    uint16_t row,
+    uint16_t column,
+    enum Color color,
+    int16_t *value,
+    int16_t *step
+) {
+    // Wait for the entire cube to write out
+    while (!vsync);
+    vsync = 0;
+
+    SET_LED(row, column, layer, color, *value);
+
+    *value += *step;
+
+    if (*value == 255) {
+        *step = -1;
+    } else if (*value == 0) {
+        *step = 1;
+    }
+}
+
+void init_framebuffer(void) {
     int i;
 
-    for (i = 0; i < 75; i++) {
-        framebuffer[i] = i+1;
+    for (i = 0; i < LENGTH(framebuffer); i++) {
+        framebuffer[i] = 10;
     }
 }
