@@ -52,19 +52,19 @@ void enable_layer(int16_t layer_num) {
     // Turn on the selected layer
     switch (layer_num) {
         case 0:
-            GpioDataRegs.GPASET.all = 0x0001;
-            break;
-        case 1:
             GpioDataRegs.GPASET.all = 0x0002;
             break;
+        case 1:
+            GpioDataRegs.GPASET.all = 0x0001;
+            break;
         case 2:
-            GpioDataRegs.GPASET.all = 0x0004;
+            GpioDataRegs.GPASET.all = 0x0010;
             break;
         case 3:
-            GpioDataRegs.GPASET.all = 0x0008;
+            GpioDataRegs.GPASET.all = 0x0004;
             break;
         case 4:
-            GpioDataRegs.GPASET.all = 0x0010;
+            GpioDataRegs.GPASET.all = 0x0008;
             break;
     }
 }

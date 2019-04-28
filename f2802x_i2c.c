@@ -319,7 +319,8 @@ void start_cube(void) {
     I2c_State.next_data = framebuffer;
     I2c_State.end = I2c_State.next_data + NUM_CHANNELS;
 
-    enable_layer(I2c_State.current_layer);
+    // Don't enable any layers until the update phase
+    enable_layer(-1);
 
     // Wait for any old transactions to complete
     while (I2caRegs.I2CMDR.bit.STP);
@@ -452,12 +453,13 @@ __interrupt void i2c_isr1(void) {
                         I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
                         I2caRegs.I2CFFTX.bit.TXFFIENA = 1;
                     } else {
-                        // We updated all the drivers, so turn on the new layer
+                        // We updated all the drivers, so turn on the current
+                        // layer, and move onto the next one
+                        enable_layer(I2c_State.current_layer);
                         I2c_State.current_layer++;
                         if (I2c_State.current_layer == 5) {
                             I2c_State.current_layer = 0;
                         }
-                        enable_layer(I2c_State.current_layer);
 
                         // Updated all the drivers, so transition back to the write state
                         I2c_State.current_device = 0;

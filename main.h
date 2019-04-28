@@ -60,7 +60,7 @@ extern volatile uint16_t curr_display;
 // color R G or B
 // value = 0 - 255
 #define SET_LED(row, column, layer, color, value)\
-    framebuffer[led_index_table[(color) + (row)*3 + (column)*3*5 + (layer)*3*5*5]] = (value)
+    (framebuffer[led_index_table[(color) + (row)*3 + (column)*3*5] + (layer)*3*5*5] = (value))
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
@@ -70,6 +70,8 @@ void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val);
 void start_cube(void);
 void led_driver_test(void);
 void enable_layer(int16_t layer_num);
+void strobe(uint16_t layer, uint16_t row, uint16_t column, enum Color color,
+    int16_t *value, int16_t *step);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
