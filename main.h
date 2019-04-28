@@ -68,6 +68,7 @@ extern volatile uint16_t vsync;
 extern const uint16_t device_addrs[3];
 void i2c_write(uint16_t slave_addr, uint16_t reg_addr, uint16_t reg_val);
 void start_cube(void);
+void stop_cube(void);
 void led_driver_test(void);
 void enable_layer(int16_t layer_num);
 void strobe(uint16_t layer, uint16_t row, uint16_t column, enum Color color,
@@ -77,12 +78,12 @@ void strobe(uint16_t layer, uint16_t row, uint16_t column, enum Color color,
 const char *itoa(int32_t num, int is_signed, int base);
 
 // display functions
-void default_pattern(void);
-void mike_pattern_1(void);
-void mike_pattern_2(void);
-void rehaan_pattern_1(void);
-void alex_pattern_1(void);
-void alex_pattern_2(void);
+void default_pattern(uint16_t beat);
+void mike_pattern_1(uint16_t beat);
+void mike_pattern_2(uint16_t beat);
+void rehaan_pattern_1(uint16_t beat);
+void alex_pattern_1(uint16_t beat);
+void alex_pattern_2(uint16_t beat);
 
 
 // ISRs
