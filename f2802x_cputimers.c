@@ -51,6 +51,7 @@
 //
 #include "F2802x_Device.h"     // Headerfile Include File
 #include "f2802x_examples.h"   // Examples Include File
+#include "main.h"
 
 struct CPUTIMER_VARS CpuTimer0;
 

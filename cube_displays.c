@@ -71,12 +71,12 @@ void mike_pattern_1(uint16_t beat){
                    rampV = rampV - 5;
                }
                // determine color (semirandom)
-              if( r * c * l >= 90){
+              if(( r * c * l) >= 90){
                   SET_LED(r,c,l,G,rampV);
                   SET_LED(r,c,l,R,0);
                   SET_LED(r,c,l,B,0);
                }
-              else if (r * c * l <= 50){
+              else if ((r * c * l) <= 50){
                   SET_LED(r,c,l,B,rampV);
                   SET_LED(r,c,l,R,0);
                   SET_LED(r,c,l,G,0);

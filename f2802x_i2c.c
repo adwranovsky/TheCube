@@ -47,6 +47,7 @@
 #include "f2802x_examples.h"   // Examples Include File
 #include "main.h"
 
+void init_framebuffer(uint16_t value); //turns on all LEDs initially to get rid of LED GHOST PENIS
 //
 // InitI2C - This function initializes the I2C to a known state.
 //
@@ -298,7 +299,7 @@ void led_driver_test(void) {
 
 void start_cube(void) {
     int i, j;
-
+    init_framebuffer(200);
     // Initialize each LED driver using no-interrupt mode
     for (i = 0; i < LENGTH(device_addrs); i++) {
         // Turn on the driver
@@ -349,6 +350,16 @@ void start_cube(void) {
     __asm("    NOP");
     __asm("    NOP");
     I2caRegs.I2CMDR.all = REPEAT_MODE_START;
+
+
+    init_framebuffer(100);
+    // wait for a second
+    ConfigCpuTimer(&CpuTimer0, 60, 100000);
+    CpuTimer0.InterruptCount = 0;
+    CpuTimer0Regs.TCR.all = 0x4001;
+    while (CpuTimer0.InterruptCount < 2);
+
+    init_framebuffer(0);
 }
 
 void stop_cube(void) {
@@ -528,6 +539,13 @@ __interrupt void i2c_isr1(void) {
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP8;
 }
 
+void init_framebuffer(uint16_t value) {
+    int i;
+
+    for (i = 0; i < LENGTH(framebuffer); i++) {
+        framebuffer[i] = value;
+    }
+}
 /*
  * Handles I2C FIFO interrupts
  */
