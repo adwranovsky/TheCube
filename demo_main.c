@@ -3,8 +3,8 @@
  *
  * Authors: Alex, Michael, and Rehaan
  *
- * This file is only compiled if the demo build config is selected. This
- * contains the main code for the final demonstration.
+ * This file is only compiled if the "Demo" build configuration is selected.
+ * This contains the main code for the final demonstration.
  */
 
 #include "main.h"

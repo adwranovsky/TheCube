@@ -87,7 +87,7 @@ void sys_init(void) {
     //
     InitCpuTimers();
     InitAdc();
-    InitSci();
+    //InitSci();
     InitSpi();
     InitSpiGpio();
     InitLCD();

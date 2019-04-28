@@ -9,6 +9,7 @@
 
 void init_framebuffer(uint16_t value);
 void index_table_check(void);
+void framebuffer_check(void);
 void layer_assignment_check(void);
 void check_all_leds(void);
 
@@ -33,11 +34,13 @@ void main(void) {
 
     init_framebuffer(0);
 
+    //layer_assignment_check();
     //check_all_leds();
-    layer_assignment_check();
-    index_table_check();
+    //framebuffer_check();
 
-    while (1);
+    while (1) {
+        index_table_check();
+    }
 }
 
 void init_framebuffer(uint16_t value) { //turns on all leds with power up to 255
@@ -49,7 +52,7 @@ void init_framebuffer(uint16_t value) { //turns on all leds with power up to 255
 }
 
 // Go through all LEDs one by one, switching on a button press. This is to
-// assist in making the LED index table.
+// verify that the index table is set up correctly.
 void index_table_check(void) {
     int row, column;
     int i;
@@ -69,6 +72,24 @@ void index_table_check(void) {
                 SET_LED(row, column, layer, colors[i], 0);
             }
         }
+    }
+}
+
+// Go through all LEDs one by one, switching on a button press. This is to
+// assist in making the LED index table.
+void framebuffer_check(void) {
+    int i;
+    button_pushed = 0;
+
+    for (i = 75*4; i < LENGTH(framebuffer); i++) {
+        //sci_send_string("Framebuffer index: ");
+        //sci_send_string(itoa(i, 0, 10));
+        //sci_send_string("\r\n");
+
+        framebuffer[i] = 128;
+        while (!button_pushed);
+        button_pushed = 0;
+        framebuffer[i] = 0;
     }
 }
 
@@ -93,7 +114,7 @@ void layer_assignment_check(void) {
 // Strobes through all LEDs
 void check_all_leds(void) {
     int i;
-    int num_cycles = 1;
+    int num_cycles = 10;
 
     while (!vsync);
     vsync = 0;

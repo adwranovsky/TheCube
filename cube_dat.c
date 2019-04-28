@@ -21,30 +21,31 @@ uint16_t framebuffer[5*5*5*3];
  * the SET_LED() macro, defined in main.h, as an interface to the framebuffer.
  */
 const uint16_t led_index_table[5*5*5*3] = {
+    // using 9 as indices I couldn't resolve, since 9 didn't light up
     //R, G, B
-    0, 1, 2,    // Row 0 Column 0
-    3, 4, 5,    // Row 0 Column 1
+    2, 3, 4,    // Row 0 Column 0
+    9, 0, 1,    // Row 0 Column 1
     6, 7, 8,    // Row 0 Column 2
-    9, 10, 11,  // Row 0 Column 4
-    12, 13, 14, // Row 0 Column 5
-    15, 16, 17, // Row 1 Column 0
-    18, 19, 20, // Row 1 Column 1
+    13, 14, 5,  // Row 0 Column 3
+    10, 11, 12, // Row 0 Column 4
+    17, 18, 19, // Row 1 Column 0
+    24, 15, 16, // Row 1 Column 1
     21, 22, 23, // Row 1 Column 2
-    24, 25, 26, // Row 1 Column 4
-    27, 28, 29, // Row 1 Column 5
-    30, 31, 32, // Row 2 Column 0
-    33, 34, 35, // Row 2 Column 1
-    36, 37, 38, // Row 2 Column 2
-    39, 40, 41, // Row 2 Column 4
-    42, 43, 44, // Row 2 Column 5
-    45, 46, 47, // Row 3 Column 0
-    48, 49, 50, // Row 3 Column 1
+    26, 25, 20, // Row 1 Column 3
+    29, 28, 27, // Row 1 Column 4
+    42, 43, 44, // Row 2 Column 0
+    35, 40, 9,  // Row 2 Column 1
+    36, 9, 9,   // Row 2 Column 2
+    33, 34, 9,  // Row 2 Column 3
+    30, 31, 32, // Row 2 Column 4
+    57, 58, 59, // Row 3 Column 0
+    54, 55, 56, // Row 3 Column 1
     51, 52, 53, // Row 3 Column 2
-    54, 55, 56, // Row 3 Column 4
-    57, 58, 59, // Row 3 Column 5
-    60, 61, 62, // Row 4 Column 0
-    63, 64, 65, // Row 4 Column 1
-    66, 67, 68, // Row 4 Column 2
-    69, 70, 71, // Row 4 Column 4
-    72, 73, 74  // Row 4 Column 5
+    48, 49, 50, // Row 3 Column 3
+    45, 46, 47, // Row 3 Column 4
+    67, 68, 69, // Row 4 Column 0
+    74, 65, 66, // Row 4 Column 1
+    71, 72, 73, // Row 4 Column 2
+    63, 64, 70, // Row 4 Column 3
+    60, 61, 62  // Row 4 Column 4
 };
