@@ -194,6 +194,7 @@ const uint16_t device_addrs[] = {0x3c|0, 0x3c|3, 0x3c|1};
 static struct {
     enum {WRITE, UPDATE, STOP} mode;
     uint16_t current_device; // index into device_addrs
+    uint16_t current_layer;  // 0-4, determines which GPIO to turn on
     uint16_t *next_data;     // stores the next value to write to the fifo
     uint16_t *end;           // once next_data gets to this address, we're done writing
 } I2c_State;
@@ -311,11 +312,14 @@ void start_cube(void) {
         i2c_write(device_addrs[i], UPDATE_REG, 0);
     }
 
-    // Start in write mode, and on the first device.
+    // Start in write mode, and on the first device, on the first layer
     I2c_State.mode = WRITE;
     I2c_State.current_device = 0;
+    I2c_State.current_layer = 0;
     I2c_State.next_data = framebuffer;
     I2c_State.end = I2c_State.next_data + NUM_CHANNELS;
+
+    enable_layer(I2c_State.current_layer);
 
     // Wait for any old transactions to complete
     while (I2caRegs.I2CMDR.bit.STP);
@@ -403,6 +407,9 @@ __interrupt void i2c_isr1(void) {
                         I2c_State.current_device = 0;
                         I2c_State.mode = UPDATE;
 
+                        // Turn off all layers while updating
+                        enable_layer(-1);
+
                         // Write 0 to the update register on the current device
                         I2caRegs.I2CSAR = device_addrs[I2c_State.current_device];
                         I2caRegs.I2CDXR = UPDATE_REG;
@@ -445,15 +452,21 @@ __interrupt void i2c_isr1(void) {
                         I2caRegs.I2CFFTX.bit.TXFFINTCLR = 1;
                         I2caRegs.I2CFFTX.bit.TXFFIENA = 1;
                     } else {
+                        // We updated all the drivers, so turn on the new layer
+                        I2c_State.current_layer++;
+                        if (I2c_State.current_layer == 5) {
+                            I2c_State.current_layer = 0;
+                        }
+                        enable_layer(I2c_State.current_layer);
+
                         // Updated all the drivers, so transition back to the write state
                         I2c_State.current_device = 0;
                         I2c_State.mode = WRITE;
 
-                        // Check if this was the last layer, move back to the
-                        // beginning of the buffer. Signal to the main
-                        // application using vsync.
-                        //if (framebuffer + LENGTH(framebuffer) == I2c_State.next_data)
-                        {// Only use the first layer for now
+                        // Check if we're back on the first layer, then move
+                        // back to the beginning of the buffer. Signal to the
+                        // main application using vsync.
+                        if (I2c_State.current_layer == 0) {
                             I2c_State.next_data = framebuffer;
                             vsync = 1;
                         }
@@ -489,7 +502,7 @@ __interrupt void i2c_isr1(void) {
                 }
             }
 
-            //// Make sure the stop condition is cleared
+            // Make sure the stop condition is cleared
             I2caRegs.I2CSTR.bit.SCD = 1;
             break;
         }
@@ -540,8 +553,6 @@ __interrupt void i2c_isr2(void) {
                 // Disable this interrupt or else it keeps on triggering
                 I2caRegs.I2CFFTX.bit.TXFFIENA = 0;
 
-                // Make sure the stop condition bit is clear so the interrupt can trigger
-                //I2caRegs.I2CSTR.bit.SCD = 1;
                 break;
             }
 

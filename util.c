@@ -45,7 +45,7 @@ const char *itoa(int32_t num, int is_signed, int base) {
     return string + index + 1;
 }
 
-void enable_layer(uint16_t layer_num) {
+void enable_layer(int16_t layer_num) {
     // Turn off all layers first
     GpioDataRegs.GPACLEAR.all = 0x001F;
 

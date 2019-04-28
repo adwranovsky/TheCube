@@ -8,6 +8,8 @@
 #include "f2802x_examples.h"
 
 void init_framebuffer(void);
+void check_layer0(void);
+void check_all_layers(void);
 void strobe(uint16_t layer, uint16_t row, uint16_t column,
     enum Color color, int16_t *value, int16_t *step);
 
@@ -26,15 +28,20 @@ void main(void) {
 
     //led_driver_test();
 
-    int16_t values[5] = {254*0/4, 254*1/4, 254*2/4, 254*3/4, 254*4/4};
-    int16_t steps[5] = {1, 1, 1, 1, 1};
     while (1) {
-        strobe(0, 0, 0, R, &values[0], &steps[0]);
-        strobe(0, 1, 1, R, &values[1], &steps[1]);
-        strobe(0, 2, 2, R, &values[2], &steps[2]);
-        strobe(0, 3, 3, R, &values[3], &steps[3]);
-        strobe(0, 4, 4, R, &values[4], &steps[4]);
+        //check_layer0();
+        check_all_layers();
     }
+
+    //int16_t values[5] = {254*0/4, 254*1/4, 254*2/4, 254*3/4, 254*4/4};
+    //int16_t steps[5] = {1, 1, 1, 1, 1};
+    //while (1) {
+    //    strobe(0, 0, 0, R, &values[0], &steps[0]);
+    //    strobe(0, 1, 1, R, &values[1], &steps[1]);
+    //    strobe(0, 2, 2, R, &values[2], &steps[2]);
+    //    strobe(0, 3, 3, R, &values[3], &steps[3]);
+    //    strobe(0, 4, 4, R, &values[4], &steps[4]);
+    //}
 }
 
 void strobe(
@@ -64,7 +71,46 @@ void init_framebuffer(void) {
     int i;
 
     for (i = 0; i < LENGTH(framebuffer); i++) {
-        framebuffer[i] = 25;
+        framebuffer[i] = 128;
     }
 }
 
+void check_layer0(void) {
+    int i;
+    int num_cycles = 1;
+    for (i = 0; i < 5*5*3; i++) {
+        int j;
+
+        for (j = 0; j < num_cycles; j++) {
+            while (!vsync);
+            vsync = 0;
+        }
+        framebuffer[i] = 128;
+
+        for (j = 0; j < num_cycles; j++) {
+            while (!vsync);
+            vsync = 0;
+        }
+        framebuffer[i] = 0;
+    }
+}
+
+void check_all_layers(void) {
+    int i;
+    int num_cycles = 1;
+    for (i = 0; i < LENGTH(framebuffer); i++) {
+        int j;
+
+        for (j = 0; j < num_cycles; j++) {
+            while (!vsync);
+            vsync = 0;
+        }
+        framebuffer[i] = 128;
+
+        for (j = 0; j < num_cycles; j++) {
+            while (!vsync);
+            vsync = 0;
+        }
+        framebuffer[i] = 0;
+    }
+}
