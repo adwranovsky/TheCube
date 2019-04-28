@@ -67,7 +67,7 @@ void strobe(
     }
 }
 
-void init_framebuffer(void) {
+void init_framebuffer(void) { //turns on all leds with power up to 255
     int i;
 
     for (i = 0; i < LENGTH(framebuffer); i++) {

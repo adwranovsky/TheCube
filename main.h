@@ -54,8 +54,13 @@ extern volatile uint16_t button_pushed;
 extern volatile uint16_t curr_display;
 
 // LED cube interface
+// row 0 - 4
+// column 0 - 4
+// layer 0 - 4
+// color R G or B
+// value = 0 - 255
 #define SET_LED(row, column, layer, color, value)\
-    framebuffer[led_index_table[(row)*3 + (column)*3*5 + (layer)*3*5*5]] = (value)
+    framebuffer[led_index_table[(color) + (row)*3 + (column)*3*5 + (layer)*3*5*5]] = (value)
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
@@ -68,6 +73,15 @@ void enable_layer(int16_t layer_num);
 
 // utility functions
 const char *itoa(int32_t num, int is_signed, int base);
+
+// display functions
+void default_pattern(void);
+void mike_pattern_1(void);
+void mike_pattern_2(void);
+void rehaan_pattern_1(void);
+void alex_pattern_1(void);
+void alex_pattern_2(void);
+
 
 // ISRs
 __interrupt void sci_rx_isr(void);

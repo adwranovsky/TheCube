@@ -188,7 +188,6 @@ void DAC_write(const uint16_t data)
          SPI_write_16(DACdata);
     }
     else if(curr_display == 2){ // decrease resolution
-      //  DACdata = (data << 4) & 0x0F00;
         DACdata = data;
         SPI_write_16(DACdata);
     }
@@ -199,17 +198,17 @@ void DAC_write(const uint16_t data)
         }
     else if(curr_display == 4){ // decrease resolution
           //  DACdata = (data << 4) & 0x0F00;
-            DACdata = (data /32) << 4;
+            DACdata = (data / 32) << 5;
             SPI_write_16(DACdata);
         }
     else if(curr_display == 5){ // decrease resolution
           //  DACdata = (data << 4) & 0x0F00;
-            DACdata = (data /64) << 4;
+            DACdata = data && 0x0F10;
             SPI_write_16(DACdata);
         }
 
     else if(curr_display == 6){ //double freq
-        DACdata = (data / 8) << 4;
+        DACdata = data - 600;
       //  DACdata = ((data * 2) << 4) & 0x0FF0; //need to keep data framed
         SPI_write_16(DACdata);
     }

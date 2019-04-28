@@ -79,7 +79,7 @@ void main(void)
                 adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
                 rfft(fft_comp_buffer);
 
-                uint32_t beat = detect_beat(fft_comp_buffer);
+                uint32_t beat = detect_beat(fft_comp_buffer); //mn
                 //sci_send_string(itoa(beat, 0, 10));
                 //sci_send_string("\r\n");
                 if (beat > 10) {
