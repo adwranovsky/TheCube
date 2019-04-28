@@ -197,6 +197,7 @@ static struct {
     uint16_t current_layer;  // 0-4, determines which GPIO to turn on
     uint16_t *next_data;     // stores the next value to write to the fifo
     uint16_t *end;           // once next_data gets to this address, we're done writing
+    uint16_t stopped;        // set to 1 after the cube is stopped
 } I2c_State;
 
 /*
@@ -350,6 +351,13 @@ void start_cube(void) {
     I2caRegs.I2CMDR.all = REPEAT_MODE_START;
 }
 
+void stop_cube(void) {
+    I2c_State.stopped = 0;
+    while (!I2c_State.stopped) {
+        I2c_State.mode = STOP;
+    }
+}
+
 /*
  * Handles normal I2C interrupts
  */
@@ -365,9 +373,10 @@ __interrupt void i2c_isr1(void) {
         // I2C stop condition detected on bus
         case I2C_SCD_ISRC: {
             switch (I2c_State.mode) {
-                // We requested to stop elsewhere, so halt the CPU for debug
+                // Signal to the application that the cube was stopped
                 case STOP:
-                    __asm("     ESTOP0");
+                    I2c_State.stopped = 1;
+                    break;
 
                 // Currently writing PWM values to the driveres
                 case WRITE: {

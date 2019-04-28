@@ -152,6 +152,9 @@ SECTIONS
    FFTcomp  ALIGN(128) : { } > DRAML0  PAGE = 1
    FFTsamples          :     > RAMM1   PAGE = 1
 
+   /* Allocate Images */
+   Images              :     > FLASHB  PAGE = 1
+
    /* Uncomment the section below if calling the IQNexp() or IQexp()
       functions from the IQMath.lib library in order to utilize the
       relevant IQ Math table in Boot ROM (This saves space and Boot ROM
