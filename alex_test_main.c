@@ -64,7 +64,7 @@ void init_framebuffer(void) {
     int i;
 
     for (i = 0; i < LENGTH(framebuffer); i++) {
-        framebuffer[i] = 0;
+        framebuffer[i] = 25;
     }
 }
 
