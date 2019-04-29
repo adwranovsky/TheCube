@@ -304,6 +304,9 @@ void start_cube(void) {
         // Turn on the driver
         i2c_write(device_addrs[i], SHUTDOWN_REG, 1);
 
+        // Change the output frequency from 3 KHz to 22 KHz
+        i2c_write(device_addrs[i], OUTPUT_FREQ_REG, 1);
+
         // Enable the appropriate channels
         for (j = 0; j < NUM_CHANNELS; j++) {
             i2c_write(device_addrs[i], LED_CTRL_1_REG + j, 1);
