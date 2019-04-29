@@ -9,7 +9,8 @@
 #include "F2802x_Device.h"
 #include "f2802x_examples.h"
 
-volatile uint16_t rampV;
+uint16_t rampV;
+uint16_t rampVsub;
 void check_all_layers(void);
 
 //Alex function to strobe LEDs
@@ -48,50 +49,36 @@ void default_pattern(uint16_t beat){
 
 //TRY SETTING BRIGHTNESS TO MODULO OF BEAT UPPER BITS
 void mike_pattern_1(uint16_t beat){
-   // SET_LED(row, column, layer, color, value)
    uint16_t r;
    uint16_t c;
    uint16_t l;
-   uint16_t add_or_sub;
-   static uint16_t slow;
-   while (!vsync);
-   vsync = 0;
-   slow++;
-   if(slow < 3){
-       return;
+ //  while (!vsync);    <---- maybe uncomment
+ //  vsync = 0;
+   if(beat > 10){
+       rampVsub = 200;
    }
-   slow = 0;
+   if(rampVsub > 0){
+       rampVsub = rampVsub - 20;
+   }
    for(r = 0; r < 5; r ++){
        for( c = 0; c < 5; c ++){
            for ( l = 0; l < 5; l++ ){
                // determine if bulbs dimming on brightening
-               if(rampV == 250){
-                   add_or_sub = 0;
-               }
-               if(rampV == 0){
-                   add_or_sub = 1;
-               }
-               //determine voltage
-               if( add_or_sub == 1){
-                   rampV = rampV + 10;
-               }
-               else{
-                   rampV = rampV - 1;
-               }
+               rampV = 200;
                // determine color (semirandom)
-              if(( r * c * l) >= 40){
+              if(( r * c * l) >= 20){
                   SET_LED(r,c,l,G,rampV);
+                  SET_LED(r,c,l,B,rampVsub);
                   SET_LED(r,c,l,R,0);
-                  SET_LED(r,c,l,B,0);
                }
-              else if ((r * c * l) <= 10){
+              else if ((r * c * l) <= 3){
                   SET_LED(r,c,l,B,rampV);
-                  SET_LED(r,c,l,R,0);
+                  SET_LED(r,c,l,R,rampVsub);
                   SET_LED(r,c,l,G,0);
                }
               else{
                   SET_LED(r,c,l,R,rampV);
-                  SET_LED(r,c,l,G,0);
+                  SET_LED(r,c,l,G,rampVsub);
                   SET_LED(r,c,l,B,0);
                }
            }
@@ -111,8 +98,8 @@ void mike_pattern_2(uint16_t beat){
     color = R;
     color2 = G;
     color3 = B;
-    while (!vsync);
-    vsync = 0;
+//    while (!vsync);      <---- maybe uncomment
+//    vsync = 0;
     for(r = 0; r < 5; r ++){
           for( c = 0; c < 5; c ++){
               for ( l = 0; l < 5; l++ ){
