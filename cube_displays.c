@@ -9,8 +9,8 @@
 #include "F2802x_Device.h"
 #include "f2802x_examples.h"
 
-uint16_t rampV;
-uint16_t rampVsub;
+uint16_t rampV = 0;
+uint16_t rampVsub = 0;
 uint16_t row = 0;
 uint16_t column = 0;
 uint16_t column_dec = 0;
@@ -53,13 +53,50 @@ void strobe(
 }
 
 void default_pattern(uint16_t beat){
-    static int16_t values[5] = {254*0/4, 254*1/4, 254*2/4, 254*3/4, 254*4/4};
-    static int16_t steps[5] = {1, 1, 1, 1, 1};
-    strobe(0, 0, 0, R, &values[0], &steps[0]);
-    strobe(0, 1, 1, R, &values[1], &steps[1]);
-    strobe(0, 2, 2, R, &values[2], &steps[2]);
-    strobe(0, 3, 3, R, &values[3], &steps[3]);
-    strobe(0, 4, 4, R, &values[4], &steps[4]);
+    //    static int16_t values[5] = {254*0/4, 254*1/4, 254*2/4, 254*3/4, 254*4/4};
+    //    static int16_t steps[5] = {1, 1, 1, 1, 1};
+    //    strobe(0, 0, 0, R, &values[0], &steps[0]);
+    //    strobe(0, 1, 1, R, &values[1], &steps[1]);
+    //    strobe(0, 2, 2, R, &values[2], &steps[2]);
+    //    strobe(0, 3, 3, R, &values[3], &steps[3]);
+    //    strobe(0, 4, 4, R, &values[4], &steps[4]);
+    uint16_t r = 0;
+    uint16_t c = 0;
+    uint16_t l = 0;
+    uint16_t rampVsubG = 0;
+    uint16_t rampVsubB = 0;
+    uint16_t rampVsubR = 0;
+    //sample_buffer[1]
+    while (!vsync);   // <---- maybe uncomment
+    vsync = 0;
+    for(r = 0; r < 5; r ++){
+        for( c = 0; c < 5; c ++){
+            for ( l = 0; l < 5; l++ ){
+                GET_PIXEL(r, c, l, rampVsubR, rampVsubG, rampVsubB);
+                 if(rampVsubG > 0){
+                     rampVsubG = rampVsubG - 1;
+                 }
+                if(rampVsubB > 0){
+                    rampVsubB = rampVsubB - 1;
+                }
+                if(rampVsubR > 0){
+                    rampVsubR = rampVsubR - 1;
+                }
+
+                rampVsub++;
+                if((rampVsub % 773) == 0){
+                    rampVsubG = rampVsub % 200;
+                }
+                if((rampVsub % 883)== 0){
+                    rampVsubB = rampVsub % 200;
+                }
+                if((rampVsub % 971)== 0){
+                    rampVsubR = rampVsub % 200;
+                }
+                SET_PIXEL(r,c, l, rampVsubR, rampVsubG, rampVsubB);
+            }
+        }
+    }
 }
 
 //TRY SETTING BRIGHTNESS TO MODULO OF BEAT UPPER BITS
@@ -181,6 +218,8 @@ void rehaan_pattern_1(uint16_t beat){
         framebuffer[i] = 50;
     }
 }
+
+
 void alex_pattern_1(uint16_t beat){
     int16_t r, l, c;
 
@@ -189,9 +228,9 @@ void alex_pattern_1(uint16_t beat){
         int16_t l;
         int16_t c;
     } center_pos = {
-        .r = 2,
-        .l = 0,
-        .c = 2
+                    .r = 2,
+                    .l = 0,
+                    .c = 2
     };
 
     // Saturate beat
