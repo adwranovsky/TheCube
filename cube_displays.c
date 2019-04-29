@@ -11,16 +11,31 @@
 
 uint16_t rampV;
 uint16_t rampVsub;
+uint16_t row = 0;
+uint16_t column = 0;
+uint16_t column_dec = 0;
+uint16_t row_dec = 0;
+uint16_t column_inc = 0;
+uint16_t row_inc = 1;
+uint16_t old_row = 2;
+uint16_t old_column = 2;
+uint16_t older_row = 2;
+uint16_t older_column = 2;
+uint16_t layer = 0;
+uint16_t layer_dir = 0;
+uint16_t old_layer = 0;
+uint16_t older_layer = 0;
+
 void check_all_layers(void);
 
 //Alex function to strobe LEDs
 void strobe(
-    uint16_t layer,
-    uint16_t row,
-    uint16_t column,
-    enum Color color,
-    int16_t *value,
-    int16_t *step
+        uint16_t layer,
+        uint16_t row,
+        uint16_t column,
+        enum Color color,
+        int16_t *value,
+        int16_t *step
 ) {
     // Wait for the entire cube to write out
     while (!vsync);
@@ -49,84 +64,117 @@ void default_pattern(uint16_t beat){
 
 //TRY SETTING BRIGHTNESS TO MODULO OF BEAT UPPER BITS
 void mike_pattern_1(uint16_t beat){
-   uint16_t r;
-   uint16_t c;
-   uint16_t l;
- //  while (!vsync);    <---- maybe uncomment
- //  vsync = 0;
-   if(beat > 10){
-       rampVsub = 200;
-   }
-   if(rampVsub > 0){
-       rampVsub = rampVsub - 20;
-   }
-   for(r = 0; r < 5; r ++){
-       for( c = 0; c < 5; c ++){
-           for ( l = 0; l < 5; l++ ){
-               // determine if bulbs dimming on brightening
-               rampV = 200;
-               // determine color (semirandom)
-              if(( r * c * l) >= 20){
-                  SET_LED(r,c,l,G,rampV);
-                  SET_LED(r,c,l,B,rampVsub);
-                  SET_LED(r,c,l,R,0);
-               }
-              else if ((r * c * l) <= 3){
-                  SET_LED(r,c,l,B,rampV);
-                  SET_LED(r,c,l,R,rampVsub);
-                  SET_LED(r,c,l,G,0);
-               }
-              else{
-                  SET_LED(r,c,l,R,rampV);
-                  SET_LED(r,c,l,G,rampVsub);
-                  SET_LED(r,c,l,B,0);
-               }
-           }
-       }
-   }
+    uint16_t r;
+    uint16_t c;
+    uint16_t l;
+    //  while (!vsync);    <---- maybe uncomment
+    //  vsync = 0;
+    if(beat > 10){
+        rampVsub = 200;
+    }
+    if(rampVsub > 0){
+        rampVsub = rampVsub - 20;
+    }
+    for(r = 0; r < 5; r ++){
+        for( c = 0; c < 5; c ++){
+            for ( l = 0; l < 5; l++ ){
+                // determine if bulbs dimming on brightening
+                rampV = 200;
+                // determine color (semirandom)
+                if(( r * c * l) >= 20){
+                    SET_LED(r,c,l,G,rampV);
+                    SET_LED(r,c,l,B,rampVsub);
+                    SET_LED(r,c,l,R,0);
+                }
+                else if ((r * c * l) <= 3){
+                    SET_LED(r,c,l,B,rampV);
+                    SET_LED(r,c,l,R,rampVsub);
+                    SET_LED(r,c,l,G,0);
+                }
+                else{
+                    SET_LED(r,c,l,R,rampV);
+                    SET_LED(r,c,l,G,rampVsub);
+                    SET_LED(r,c,l,B,0);
+                }
+            }
+        }
+    }
 
 }
 
 //color change based on beat detection
 void mike_pattern_2(uint16_t beat){
-    uint16_t r;
-    uint16_t c;
-    uint16_t l;
-    char color;
-    char color2;
-    char color3;
-    color = R;
-    color2 = G;
-    color3 = B;
-//    while (!vsync);      <---- maybe uncomment
-//    vsync = 0;
-    for(r = 0; r < 5; r ++){
-          for( c = 0; c < 5; c ++){
-              for ( l = 0; l < 5; l++ ){
-                  if(beat > 3){
-                      if(color == R){
-                          color = G;
-                          color2 = B;
-                          color3 = R;
-                      }
-                      else if(color == G){
-                          color = B;
-                          color2 = R;
-                          color3 = G;
-                      }
-                      else{
-                          color = R;
-                          color2 = G;
-                          color3 = B;
-                      }
-                  }
-                  SET_LED(r,c,l,color,200);
-                  SET_LED(r,c,l,color2,0);
-                  SET_LED(r,c,l,color3,0);
-              }
-          }
+    while (!vsync);     // <---- maybe uncomment
+    vsync = 0;
+    // init_framebuffer(0);
+    //save previous states
+    older_row = old_row;
+    older_column = old_column;
+    older_layer = old_layer;
+    old_row = row;
+    old_layer = layer;
+    old_column = column;
+
+    //turn off old lights
+    SET_LED(old_row, old_column, old_layer, G, 200);
+    SET_LED(older_row,older_column,older_layer,R,0);
+    SET_LED(older_row,older_column,older_layer,G,0);
+
+
+
+    if((column_dec == 0) && (column_inc == 1) && (row_inc == 0) && (row_dec == 0)){
+        column = column + 1;
     }
+    else if((column_dec == 1) && (column_inc == 0) && (row_inc == 0) && (row_dec == 0)){
+        column = column - 1;
+    }
+    else if((column_dec == 0) && (column_inc == 0) && (row_inc == 1) && (row_dec == 0)){
+        row = row + 1;
+    }
+    else if((column_dec == 0) && (column_inc == 0) && (row_inc == 0) && (row_dec == 1)){
+        row = row - 1;
+    }
+
+    if((column == 4) && (row == 0)){
+        column_dec = 1;
+        row_dec = 0;
+        row_inc = 0;
+        column_inc = 0;
+    }
+    else if((column == 0) && (row == 0)){
+        column_dec = 0;
+        row_dec = 0;
+        row_inc = 1;
+        column_inc = 0;
+    }
+
+    else if((column == 0) && (row == 4)){
+        column_dec = 0;
+        row_dec = 0;
+        row_inc = 0;
+        column_inc = 1;
+    }
+    else if((column == 4) && (row == 4)){
+        column_dec = 0;
+        row_dec = 1;
+        row_inc = 0;
+        column_inc = 0;
+        if(layer == 4){
+            layer_dir = 1;
+        }
+        else if(layer == 0){
+            layer_dir = 0;
+        }
+        if(layer_dir == 1){
+            layer = layer - 1;
+        }
+        else if(layer_dir == 0){
+            layer = layer + 1;
+        }
+    }
+    SET_LED(row,column,layer,R,200);
 }
+
 void rehaan_pattern_1(uint16_t beat){
     int i;
     for (i = 0; i < LENGTH(framebuffer); i++) {

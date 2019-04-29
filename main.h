@@ -89,6 +89,7 @@ void led_driver_test(void);
 void enable_layer(int16_t layer_num);
 void strobe(uint16_t layer, uint16_t row, uint16_t column, enum Color color,
     int16_t *value, int16_t *step);
+void init_framebuffer(uint16_t value); //turns on all LEDs initially to get rid of LED GHOST PENIS
 
 // utility functions and macros
 #define ABS(x) ( (x) < 0 ? -(x) : (x) )

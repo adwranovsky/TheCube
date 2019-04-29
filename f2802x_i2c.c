@@ -47,7 +47,6 @@
 #include "f2802x_examples.h"   // Examples Include File
 #include "main.h"
 
-void init_framebuffer(uint16_t value); //turns on all LEDs initially to get rid of LED GHOST PENIS
 //
 // InitI2C - This function initializes the I2C to a known state.
 //
