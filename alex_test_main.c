@@ -7,11 +7,11 @@
 #include "F2802x_Device.h"
 #include "f2802x_examples.h"
 
-void init_framebuffer(uint16_t value);
-void index_table_check(void);
-void framebuffer_check(void);
-void layer_assignment_check(void);
-void check_all_leds(void);
+static void init_framebuffer(uint16_t value);
+static void index_table_check(void);
+static void framebuffer_check(void);
+static void layer_assignment_check(void);
+static void check_all_leds(void);
 
 void main(void) {
     sys_init();
@@ -51,7 +51,7 @@ void main(void) {
     }
 }
 
-void init_framebuffer(uint16_t value) { //turns on all leds with power up to 255
+static void init_framebuffer(uint16_t value) { //turns on all leds with power up to 255
     int i;
 
     for (i = 0; i < LENGTH(framebuffer); i++) {
@@ -61,7 +61,7 @@ void init_framebuffer(uint16_t value) { //turns on all leds with power up to 255
 
 // Go through all LEDs one by one, switching on a button press. This is to
 // verify that the index table is set up correctly.
-void index_table_check(void) {
+static void index_table_check(void) {
     int row, column;
     int i;
     const int layer = 4;
@@ -85,7 +85,7 @@ void index_table_check(void) {
 
 // Go through all LEDs one by one, switching on a button press. This is to
 // assist in making the LED index table.
-void framebuffer_check(void) {
+static void framebuffer_check(void) {
     int i;
     button_pushed = 0;
 
@@ -104,7 +104,7 @@ void framebuffer_check(void) {
 // Lights up a couple LEDs in a single layer, moving to the next layer on a
 // button press. This is to assist in creating the assignments in the
 // enable_layer() function in util.c
-void layer_assignment_check(void) {
+static void layer_assignment_check(void) {
     int layer;
     for (layer = 0; layer < 5; layer++) {
         int i;
@@ -120,7 +120,7 @@ void layer_assignment_check(void) {
 }
 
 // Strobes through all LEDs
-void check_all_leds(void) {
+static void check_all_leds(void) {
     int i;
     int num_cycles = 10;
 

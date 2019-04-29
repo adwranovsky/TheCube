@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 // Use to get the length of a static array only
 #define LENGTH(x) ((sizeof x)/(sizeof x[0]))
@@ -42,6 +43,7 @@ void bit_reversal(volatile int32_t *sample_buffer, int32_t *fft_comp_buffer);
 void print_time_domain(int32_t *sample_buffer);
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
 uint32_t detect_beat(const int32_t *frequencies);
+int32_t strongest_freq(const int32_t frequencies[FFT_SIZE+2]);
 
 // LCD functions and variables
 void LCDTimerStart(void);
@@ -61,6 +63,11 @@ extern volatile uint16_t curr_display;
 // value = 0 - 255
 #define SET_LED(row, column, layer, color, value)\
     (framebuffer[led_index_table[(color) + (row)*3 + (column)*3*5] + (layer)*3*5*5] = (value))
+
+// Like SET_LED(), but sets R, G, and B simultaneously
+#define SET_PIXEL(row, column, layer, r, g, b) (SET_LED(row, column, layer, R, r),\
+    SET_LED(row, column, layer, G, r), SET_LED(row, column, layer, B, r)) 
+
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
 extern const uint16_t led_index_table[5*5*5*3];
@@ -74,8 +81,10 @@ void enable_layer(int16_t layer_num);
 void strobe(uint16_t layer, uint16_t row, uint16_t column, enum Color color,
     int16_t *value, int16_t *step);
 
-// utility functions
+// utility functions and macros
+#define ABS(x) ( (x) < 0 ? -(x) : (x) )
 const char *itoa(int32_t num, int is_signed, int base);
+void color_picker(int32_t freq_index, int16_t scale, uint16_t *r, uint16_t *g, uint16_t *b);
 
 // display functions
 void default_pattern(uint16_t beat);

@@ -68,3 +68,19 @@ void enable_layer(int16_t layer_num) {
             break;
     }
 }
+
+void color_picker(int32_t freq_index, int16_t scale, uint16_t *r, uint16_t *g, uint16_t *b) {
+    static const r_colors[FFT_SIZE/2] = {128, 255,   0,   0, 127, 127,   0, 191, 191,  64,   0,  64,   0, 160, 160,  63};
+    static const g_colors[FFT_SIZE/2] = {128,   0, 255,   0, 127,   0, 127,  64,   0, 191, 191,   0,  64,  63,  31, 160};
+    static const b_colors[FFT_SIZE/2] = {128,   0,   0, 255,   0, 127, 127,   0,  64,   0,  64, 191, 191,  31,  63,  31};
+
+    if (freq_index >= FFT_SIZE/2)
+        freq_index = 0;
+
+    if (scale < 1)
+        scale = 1;
+
+    *r = r_colors[freq_index] / scale;
+    *g = g_colors[freq_index] / scale;
+    *b = b_colors[freq_index] / scale;
+}

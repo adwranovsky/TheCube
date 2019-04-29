@@ -109,3 +109,19 @@ uint32_t detect_beat(const int32_t frequencies[FFT_SIZE+2]) {
 
     return beat;
 }
+
+int32_t strongest_freq(const int32_t frequencies[FFT_SIZE+2]) {
+    int32_t max = -1;
+    int32_t max_index = 0;
+    int32_t i;
+
+    // don't include the DC frequency
+    for (i = 1; i < FFT_SIZE/2; i++) {
+        if (frequencies[i] > max) {
+            max = frequencies[i];
+            max_index = i;
+        }
+    }
+
+    return max_index;
+}

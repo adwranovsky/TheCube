@@ -147,15 +147,39 @@ void rehaan_pattern_1(uint16_t beat){
     }
 }
 void alex_pattern_1(uint16_t beat){
-    uint16_t positions[5*5];
-    uint16_t i, j;
+    int16_t r, l, c;
+    int16_t cube_radius = beat >> 3;
 
-    for (i = 0; i < LENGTH(positions); i++) {
-        positions[i] = 0;
+    struct {
+        int16_t r;
+        int16_t l;
+        int16_t c;
+    } cube_center = {
+        .r = 2,
+        .l = 2,
+        .c = 2
+    };
+
+    for (l = 0; l < 5; l++) {
+        bool in_l = ABS(cube_center.l - l) <= cube_radius;
+        for (r = 0; r < 5; r++) {
+            bool in_r = ABS(cube_center.r - r) <= cube_radius;
+            for (c = 0; c < 5; c++) {
+                bool in_c = ABS(cube_center.c - c) <= cube_radius;
+
+                if (in_l && in_r && in_c) {
+                    int32_t freq_index = strongest_freq(fft_comp_buffer);
+                    uint16_t red, green, blue;
+                    color_picker(freq_index, cube_radius, &red, &green, &blue);
+                    SET_PIXEL(r, c, l, red, green, blue);
+                } else {
+                    SET_PIXEL(r, c, l, 0, 0, 0);
+                }
+            }
+        }
     }
-
-    
 }
+
 void alex_pattern_2(uint16_t beat){
 
 }
