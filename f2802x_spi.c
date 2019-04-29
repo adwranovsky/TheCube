@@ -53,9 +53,7 @@
 #define SPI_BRR        3 // clock is at 3.7 MHz --->>> may need to slow down to match rate of data from ADC (80 KHz)
 
 volatile uint16_t readyForMore = 0; // SPI TX FIFO is ready for new data
-volatile  int16_t sample_buffer_2[40];
 
-uint16_t dataSent = 0;              // number of transmissions made from 40 in buffer
 //
 // InitSPI - This function initializes the SPI(s) to a known state.
 //
@@ -218,53 +216,6 @@ void DAC_write(const uint16_t data)
     }
 }
 
-
-//function will test the DAC by playing a known frequency via a square wave
-void
-DAC_test_freq(void){
-    uint16_t DAC_test_data;
-    uint16_t i = 0;
-    while(1){
-        if(readyForMore == 0){
-            readyForMore = 1;  //interrupt ack
-            i++;
-            if(i < 10){
-                DAC_test_data = 0x00FF;             // 40 bits should take 1 millisecond to send, combined with 1 millisecond for 0's to get a frequency of 490 Hz
-            }
-            else {
-                DAC_test_data = 0x0000;
-            }
-            if(i == 19){
-                i = 0; //reset on 10th iteration
-            }
-            DAC_write(DAC_test_data);
-        }
-    }
-}
-
-
-
-//
-//prototype function to send 40 ADC audio samples to DAC sequentially
-//Author - Michael
-//
-void DAC_send(void)
-{
-    uint16_t data;
-    if (readyForMore == 0){
-        readyForMore = 1;  //NOT ready for more
-        if(dataSent >= 40){ //function called because final data finished sending; abort
-            dataSent = 0;
-            readyForMore = 0;  //psyche, its actually ready for more
-            return;
-        }
-        else{
-            data = sample_buffer_2[dataSent];
-            DAC_write(data);
-            dataSent++;
-        }
-    }
-}
 
 //
 //prototype function to send a single ADC audio samples to DAC, called from adc interrupt

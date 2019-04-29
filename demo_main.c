@@ -29,8 +29,6 @@ void main(void) {
     adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
     while (1) {
 
-
-
         //change LCD screen and audio effect, ack button push
         if(button_pushed != 0){
             if(curr_display == 6){
