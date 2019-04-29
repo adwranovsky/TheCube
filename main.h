@@ -34,7 +34,7 @@ void DAC_send_2(uint16_t ADC_data);
 
 
 // DSP utilities
-#define FFT_SIZE 64
+#define FFT_SIZE 32
 extern int32_t fft_comp_buffer[FFT_SIZE+2];
 extern volatile int32_t sample_buffer[FFT_SIZE];
 void rfft(int32_t *fft_comp_buffer);

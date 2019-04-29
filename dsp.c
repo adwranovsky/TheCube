@@ -19,7 +19,7 @@ volatile int32_t sample_buffer[FFT_SIZE];
 
 
 // Make sure to have FFT defaults match FFT_SIZE
-RFFT32 rfft_control = RFFT32_64P_DEFAULTS;
+RFFT32 rfft_control = RFFT32_32P_DEFAULTS;
 
 /*
  * Wrapper around the DSP library bit reversal function

@@ -16,12 +16,6 @@ void check_all_leds(void);
 void main(void) {
     sys_init();
 
-    // wait for a second
-    //ConfigCpuTimer(&CpuTimer0, 60, 500000);
-    //CpuTimer0.InterruptCount = 0;
-    //CpuTimer0Regs.TCR.all = 0x4001;
-    //while (CpuTimer0.InterruptCount < 2);
-
     init_framebuffer(255);
 
     start_cube();
@@ -34,12 +28,26 @@ void main(void) {
 
     init_framebuffer(0);
 
-    //layer_assignment_check();
-    //check_all_leds();
-    //framebuffer_check();
+    // Turn all the corners on so that I know I2C is running
+    SET_LED(0, 0, 0, G, 255);
+    SET_LED(0, 0, 4, G, 255);
+    SET_LED(0, 4, 0, G, 255);
+    SET_LED(0, 4, 4, G, 255);
+    SET_LED(4, 0, 0, G, 255);
+    SET_LED(4, 0, 4, G, 255);
+    SET_LED(4, 4, 0, G, 255);
+    SET_LED(4, 4, 4, G, 255);
 
     while (1) {
-        index_table_check();
+        adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
+        while (!adc_done_sampling());
+        bit_reversal(sample_buffer, fft_comp_buffer);
+        rfft(fft_comp_buffer);
+
+        uint16_t value = detect_beat(fft_comp_buffer) > 10 ? 255 : 10;
+
+        SET_LED(0, 2, 4, B, value);
+        SET_LED(0, 2, 4, R, value);
     }
 }
 

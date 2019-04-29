@@ -147,7 +147,14 @@ void rehaan_pattern_1(uint16_t beat){
     }
 }
 void alex_pattern_1(uint16_t beat){
+    uint16_t positions[5*5];
+    uint16_t i, j;
 
+    for (i = 0; i < LENGTH(positions); i++) {
+        positions[i] = 0;
+    }
+
+    
 }
 void alex_pattern_2(uint16_t beat){
 
