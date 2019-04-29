@@ -44,6 +44,7 @@ void print_time_domain(int32_t *sample_buffer);
 void print_freq_domain(int32_t *fft_comp_buffer, int32_t sample_rate);
 uint32_t detect_beat(const int32_t *frequencies);
 int32_t strongest_freq(const int32_t frequencies[FFT_SIZE+2]);
+uint32_t get_volume(const int32_t frequencies[FFT_SIZE+2]);
 
 // LCD functions and variables
 void LCDTimerStart(void);
@@ -66,7 +67,15 @@ extern volatile uint16_t curr_display;
 
 // Like SET_LED(), but sets R, G, and B simultaneously
 #define SET_PIXEL(row, column, layer, r, g, b) (SET_LED(row, column, layer, R, r),\
-    SET_LED(row, column, layer, G, r), SET_LED(row, column, layer, B, r)) 
+    SET_LED(row, column, layer, G, g), SET_LED(row, column, layer, B, b)) 
+
+// Works like SET_LED(), but instead returns the value
+#define GET_LED(row, column, layer, color)\
+    (framebuffer[led_index_table[(color) + (row)*3 + (column)*3*5] + (layer)*3*5*5])
+
+// Put the color values of the pixel into r, g, and b
+#define GET_PIXEL(row, column, layer, r, g, b) ( (r = GET_LED(row, column, layer, R)),\
+    (g = GET_LED(row, column, layer, G)), (b = GET_LED(row, column, layer, B)) )
 
 enum Color {R=0, G=1, B=2};
 extern uint16_t framebuffer[5*5*5*3];
@@ -84,7 +93,7 @@ void strobe(uint16_t layer, uint16_t row, uint16_t column, enum Color color,
 // utility functions and macros
 #define ABS(x) ( (x) < 0 ? -(x) : (x) )
 const char *itoa(int32_t num, int is_signed, int base);
-void color_picker(int32_t freq_index, int16_t scale, uint16_t *r, uint16_t *g, uint16_t *b);
+void color_picker(int32_t index, int16_t scale, uint16_t *r, uint16_t *g, uint16_t *b);
 
 // display functions
 void default_pattern(uint16_t beat);

@@ -88,10 +88,7 @@ uint32_t detect_beat(const int32_t frequencies[FFT_SIZE+2]) {
     uint32_t power = 0;
 
     // calculate the power
-    size_t i;
-    for (i = 1; i < FFT_SIZE/2; i++) {
-        power += frequencies[i]; // probably won't overflow
-    }
+    power = get_volume(frequencies);
 
     // find the likelyhood of a beat
     uint32_t beat = power > avg_power ? power - avg_power : 0;
@@ -108,6 +105,16 @@ uint32_t detect_beat(const int32_t frequencies[FFT_SIZE+2]) {
     avg_power = (avg_power >> 1) + power;
 
     return beat;
+}
+
+uint32_t get_volume(const int32_t frequencies[FFT_SIZE+2]) {
+    // calculate the power
+    uint32_t power = 0;
+    size_t i;
+    for (i = 1; i < FFT_SIZE/2; i++) {
+        power += frequencies[i]; // probably won't overflow
+    }
+    return power;
 }
 
 int32_t strongest_freq(const int32_t frequencies[FFT_SIZE+2]) {

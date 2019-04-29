@@ -69,18 +69,23 @@ void enable_layer(int16_t layer_num) {
     }
 }
 
-void color_picker(int32_t freq_index, int16_t scale, uint16_t *r, uint16_t *g, uint16_t *b) {
-    static const r_colors[FFT_SIZE/2] = {128, 255,   0,   0, 127, 127,   0, 191, 191,  64,   0,  64,   0, 160, 160,  63};
-    static const g_colors[FFT_SIZE/2] = {128,   0, 255,   0, 127,   0, 127,  64,   0, 191, 191,   0,  64,  63,  31, 160};
-    static const b_colors[FFT_SIZE/2] = {128,   0,   0, 255,   0, 127, 127,   0,  64,   0,  64, 191, 191,  31,  63,  31};
+void color_picker(int32_t index, int16_t scale, uint16_t *r, uint16_t *g, uint16_t *b) {
+    static const uint16_t r_colors[6] = {6, 0, 0, 3, 3, 0};
+    static const uint16_t g_colors[6] = {0, 6, 0, 3, 0, 3};
+    static const uint16_t b_colors[6] = {0, 0, 6, 0, 3, 3};
 
-    if (freq_index >= FFT_SIZE/2)
-        freq_index = 0;
+    index = ABS(index) % LENGTH(r_colors);
 
-    if (scale < 1)
-        scale = 1;
+    if (scale < 0)
+        scale = 0;
 
-    *r = r_colors[freq_index] / scale;
-    *g = g_colors[freq_index] / scale;
-    *b = b_colors[freq_index] / scale;
+    *r = r_colors[index] * scale, 255;
+    *g = g_colors[index] * scale, 255;
+    *b = b_colors[index] * scale, 255;
+    if (*r > 255)
+        *r = 255;
+    if (*g > 255)
+        *g = 255;
+    if (*b > 255)
+        *b = 255;
 }

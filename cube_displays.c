@@ -135,33 +135,62 @@ void rehaan_pattern_1(uint16_t beat){
 }
 void alex_pattern_1(uint16_t beat){
     int16_t r, l, c;
-    int16_t cube_radius = beat >> 3;
 
     struct {
         int16_t r;
         int16_t l;
         int16_t c;
-    } cube_center = {
+    } center_pos = {
         .r = 2,
-        .l = 2,
+        .l = 0,
         .c = 2
     };
 
-    for (l = 0; l < 5; l++) {
-        bool in_l = ABS(cube_center.l - l) <= cube_radius;
-        for (r = 0; r < 5; r++) {
-            bool in_r = ABS(cube_center.r - r) <= cube_radius;
-            for (c = 0; c < 5; c++) {
-                bool in_c = ABS(cube_center.c - c) <= cube_radius;
+    // Saturate beat
+    if (beat > 255)
+        beat = 255;
 
-                if (in_l && in_r && in_c) {
-                    int32_t freq_index = strongest_freq(fft_comp_buffer);
-                    uint16_t red, green, blue;
-                    color_picker(freq_index, cube_radius, &red, &green, &blue);
-                    SET_PIXEL(r, c, l, red, green, blue);
+    for (l = 0; l < 5; l++) {
+        int32_t l_dist = ABS(center_pos.l - l);
+        l_dist *= l_dist;
+        for (r = 0; r < 5; r++) {
+            int32_t r_dist = ABS(center_pos.r - r);
+            r_dist *= r_dist;
+            for (c = 0; c < 5; c++) {
+                int32_t c_dist = ABS(center_pos.c - c);
+                c_dist *= c_dist;
+
+                int32_t total_dist = c_dist + r_dist + l_dist;
+
+                int16_t red, green, blue;
+                GET_PIXEL(r, c, l, red, green, blue);
+
+                uint16_t decay_amount;
+                if (total_dist > 36) {
+                    decay_amount = 3;
+                } else if (total_dist > 24) {
+                    decay_amount = 3;
+                } else if (total_dist > 12) {
+                    decay_amount = 2;
                 } else {
-                    SET_PIXEL(r, c, l, 0, 0, 0);
+                    decay_amount = 1;
                 }
+
+                red >>= decay_amount;
+                green >>= decay_amount;
+                blue >>= decay_amount;
+
+                int32_t freq_index = strongest_freq(fft_comp_buffer);
+                int32_t intensity = beat - (total_dist*4);
+                //intensity = intensity < 0 ? 0 : intensity;
+
+                uint16_t new_red, new_green, new_blue;
+                color_picker(freq_index, intensity, &new_red, &new_green, &new_blue);
+                new_red += red;
+                new_green += green;
+                new_blue += blue;
+
+                SET_PIXEL(r, c, l, new_red, new_green, new_blue);
             }
         }
     }
