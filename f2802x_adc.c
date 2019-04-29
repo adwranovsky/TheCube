@@ -523,11 +523,10 @@ __interrupt void adc_int1_isr(void) {
         // sample allows us to take advantage of more bits.
         Sample_Buffer.data[Sample_Buffer.index++] = result << 15;
 
-        // If done, turn off CPU timer 1. CPU timer 1 triggers the start of an ADC
-        // sample, so turning it off stops ADC sampling.
+        // CPU timer will not be turned off because all audio samples are sent to DAC
         if (Sample_Buffer.index == Sample_Buffer.length) {
             Sample_Buffer.run_flag = 0;
-          //  CpuTimer1Regs.TCR.bit.TSS = 1; Dont turn off timer, just tell
+            CpuTimer1Regs.TCR.bit.TSS = 1;
         }
     }
 

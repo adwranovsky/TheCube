@@ -168,7 +168,7 @@ InitSpiaGpio()
 //
 void SPI_write_16(const uint16_t data)
 {
-    SpiaRegs.SPIDAT = data;
+ //   SpiaRegs.SPIDAT = data;
     SpiaRegs.SPITXBUF = data;
 }
 

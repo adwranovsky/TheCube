@@ -45,14 +45,22 @@ void default_pattern(uint16_t beat){
     strobe(0, 3, 3, R, &values[3], &steps[3]);
     strobe(0, 4, 4, R, &values[4], &steps[4]);
 }
+
+//TRY SETTING BRIGHTNESS TO MODULO OF BEAT UPPER BITS
 void mike_pattern_1(uint16_t beat){
    // SET_LED(row, column, layer, color, value)
    uint16_t r;
    uint16_t c;
    uint16_t l;
    uint16_t add_or_sub;
+   static uint16_t slow;
    while (!vsync);
    vsync = 0;
+   slow++;
+   if(slow < 3){
+       return;
+   }
+   slow = 0;
    for(r = 0; r < 5; r ++){
        for( c = 0; c < 5; c ++){
            for ( l = 0; l < 5; l++ ){
@@ -65,18 +73,18 @@ void mike_pattern_1(uint16_t beat){
                }
                //determine voltage
                if( add_or_sub == 1){
-                   rampV = rampV + 5;
+                   rampV = rampV + 10;
                }
                else{
-                   rampV = rampV - 5;
+                   rampV = rampV - 1;
                }
                // determine color (semirandom)
-              if(( r * c * l) >= 90){
+              if(( r * c * l) >= 40){
                   SET_LED(r,c,l,G,rampV);
                   SET_LED(r,c,l,R,0);
                   SET_LED(r,c,l,B,0);
                }
-              else if ((r * c * l) <= 50){
+              else if ((r * c * l) <= 10){
                   SET_LED(r,c,l,B,rampV);
                   SET_LED(r,c,l,R,0);
                   SET_LED(r,c,l,G,0);
@@ -108,7 +116,7 @@ void mike_pattern_2(uint16_t beat){
     for(r = 0; r < 5; r ++){
           for( c = 0; c < 5; c ++){
               for ( l = 0; l < 5; l++ ){
-                  if(beat > 0){
+                  if(beat > 3){
                       if(color == R){
                           color = G;
                           color2 = B;

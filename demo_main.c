@@ -25,14 +25,11 @@ void main(void) {
     start_cube();
     PatternFunc all_patterns[] = {default_pattern, mike_pattern_1, mike_pattern_2, rehaan_pattern_1, alex_pattern_1, alex_pattern_2}; //add other patterns
     // Start the CPU timer, which triggers the ADC interrupt at regular intervals
-    //CpuTimer1Regs.TCR.bit.TSS = 0;
-    //adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
+    CpuTimer1Regs.TCR.bit.TSS = 0;
+    adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
     while (1) {
 
-  //      SET_LED(1,1,1,G,0);
 
-        //update LED pattern
-        all_patterns[curr_display - 1](beat); // since curr_display starts at 1
 
         //change LCD screen and audio effect, ack button push
         if(button_pushed != 0){
@@ -47,12 +44,14 @@ void main(void) {
         }
 
         //detect beat with FFT
-        //while (!adc_done_sampling());
-        //bit_reversal(sample_buffer, fft_comp_buffer);
-        //adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
-        //rfft(fft_comp_buffer);
-        //DAC_send(); //this gets called as soon as buffer is populated with raw sample data so that dac can start pumping it out
-        //beat = detect_beat(fft_comp_buffer);
+        if (adc_done_sampling()){
+            bit_reversal(sample_buffer, fft_comp_buffer);
+            adc_start_sampling(sample_buffer, LENGTH(sample_buffer));
+            rfft(fft_comp_buffer);
+            CpuTimer1Regs.TCR.bit.TSS = 0;
+            beat = detect_beat(fft_comp_buffer);//update LED pattern
+            all_patterns[curr_display - 1](beat); // since curr_display starts at 1
+        }
     }
 }
 
