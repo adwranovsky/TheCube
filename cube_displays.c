@@ -228,14 +228,18 @@ void alex_pattern_1(uint16_t beat){
         int16_t l;
         int16_t c;
     } center_pos = {
-                    .r = 2,
-                    .l = 0,
-                    .c = 2
+        .r = 2,
+        .l = 0,
+        .c = 2
     };
 
     // Saturate beat
     if (beat > 255)
         beat = 255;
+
+    // Make sure the cube's updated at least once since last time
+    while (!vsync);
+    vsync = 0;
 
     for (l = 0; l < 5; l++) {
         int32_t l_dist = ABS(center_pos.l - l);
@@ -267,10 +271,13 @@ void alex_pattern_1(uint16_t beat){
                 green >>= decay_amount;
                 blue >>= decay_amount;
 
-                int32_t freq_index = strongest_freq(fft_comp_buffer);
-                int32_t intensity = beat - (total_dist*4);
-                //intensity = intensity < 0 ? 0 : intensity;
+                int32_t intensity = beat - (total_dist*2);
+                if (intensity < 0) {
 
+                    intensity = 0;
+                }
+
+                int32_t freq_index = strongest_freq(fft_comp_buffer);
                 uint16_t new_red, new_green, new_blue;
                 color_picker(freq_index, intensity, &new_red, &new_green, &new_blue);
                 new_red += red;
@@ -284,7 +291,54 @@ void alex_pattern_1(uint16_t beat){
 }
 
 void alex_pattern_2(uint16_t beat){
+    uint16_t l, r, c;
+    static bool search_top = false;
 
+    // Make sure at least one cube refresh has happened
+    while (!vsync);
+    vsync = 0;
+
+    // Detect if we need to initialize our pattern
+    if (!GET_LED(3, 3, 0, R) && !GET_LED(3, 3, 4, R)) {
+        init_framebuffer(0);
+        l = 0;
+        for (r = 0; r < 5; r++)
+        for (c = 0; c < 5; c++)
+            SET_LED(r, c, l, R, 128);
+    }
+
+    if (beat < 20)
+        return;
+
+    // Search for the first pixel in either the top or bottom layer, and slide
+    // it to the other side.
+    for (r = 0; r < 5; r++) {
+        for (c = 0; c < 5; c++) {
+            if (search_top) {
+                l = 4;
+            } else {
+                l = 0;
+            }
+
+            uint16_t red = GET_LED(r, c, l, R);
+
+            if (red > 0) {
+                // we've found the next pixel! Shift it to the other side
+                int16_t curr_l;
+                int16_t inc = l > 0 ? -1 : 1;
+                for (curr_l = l+inc; curr_l >= 0 && curr_l <= 4; curr_l += inc) {
+                    while (!vsync);
+                    vsync = 0;
+
+                    SET_LED(r, c, curr_l-inc, R, 0);
+                    SET_LED(r, c, curr_l, R, 128);
+                }
+                return;
+            }
+        }
+    }
+
+    search_top = !search_top;
 }
 
 void check_all_layers(void) {
